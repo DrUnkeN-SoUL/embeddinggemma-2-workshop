@@ -12,12 +12,12 @@ REMOTE_KEY=gdg node server.js  # or choose the key yourself
 It prints three URLs:
 
 - **Display**: open on the projector / external screen and press F for fullscreen.
-- **Remote (this laptop)**: big ←/→ buttons, a jump-to-slide menu, Blank, an elapsed-time timer, the speaker notes and (on wide screens) a live preview of the projector.
+- **Remote (this laptop)**: opened on `127.0.0.1` rather than `localhost` on purpose, because browsers share zoom per host and this keeps the projector and speaker page sizes independent. Big ←/→ buttons, a jump-to-slide menu, Blank, an elapsed-time timer, the speaker notes and (on wide screens) a live preview of the projector.
 - **Remote (phone)**: the same page over Wi-Fi. Under WSL2 the printed LAN address is the WSL VM's, which phones can't reach; use the laptop URL, or enable WSL mirrored networking / a Windows port proxy.
 
 Only connections carrying the key can control the slides. Opening `index.html` directly (file://) still works with the keyboard, just without the remote.
 
-Keyboard on the display: ←/→ / Space / PageUp/PageDown, Home/End, F fullscreen, B blank.
+Keyboard on the display: ←/→ / Space / PageUp/PageDown, Home/End, F fullscreen, B blank, Ctrl + scroll or Ctrl + `+`/`-`/`0` to resize the slides only (remembered per screen).
 
 ## Before the event
 

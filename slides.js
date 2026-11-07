@@ -40,6 +40,34 @@ addEventListener('keydown', e => {
 });
 addEventListener('hashchange', fromHash);
 
+// Deck-only zoom. Browsers share zoom per host, so plain Ctrl+/- on this tab would also resize the
+// speaker page. Instead, Ctrl + scroll / Ctrl + '+' '-' '0' scale only the slides, remembered per screen.
+let deckZoom = 1;
+try { deckZoom = Number(localStorage.getItem('deck-zoom')) || 1; } catch {}
+function setZoom(z) {
+  deckZoom = Math.min(2.5, Math.max(0.5, Math.round(z * 100) / 100));
+  document.documentElement.style.zoom = deckZoom;
+  document.documentElement.style.setProperty('--dz', deckZoom);
+  try { localStorage.setItem('deck-zoom', deckZoom); } catch {}
+  let t = document.getElementById('zoom-toast');
+  if (!t) { t = document.createElement('div'); t.id = 'zoom-toast'; document.body.appendChild(t); }
+  t.textContent = `Slides ${Math.round(deckZoom * 100)}%`; t.classList.add('on');
+  clearTimeout(setZoom.timer); setZoom.timer = setTimeout(() => t.classList.remove('on'), 900);
+}
+if (!PREVIEW) {
+  if (deckZoom !== 1) { document.documentElement.style.zoom = deckZoom; document.documentElement.style.setProperty('--dz', deckZoom); }
+  addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    if (e.key === '=' || e.key === '+') { e.preventDefault(); setZoom(deckZoom + 0.1); }
+    else if (e.key === '-' || e.key === '_') { e.preventDefault(); setZoom(deckZoom - 0.1); }
+    else if (e.key === '0') { e.preventDefault(); setZoom(1); }
+  }, { capture: true });
+  addEventListener('wheel', e => {
+    if (!e.ctrlKey) return;
+    e.preventDefault(); setZoom(deckZoom * (e.deltaY < 0 ? 1.05 : 1 / 1.05));
+  }, { passive: false });
+}
+
 // ---- Remote control (only when served over http by server.js) ----
 function state() {
   const s = slides[current], n = slides[current + 1], notes = s.querySelector('aside.notes');

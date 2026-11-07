@@ -105,8 +105,9 @@ server.on('upgrade', (req, sock) => {
 server.listen(PORT, '0.0.0.0', () => {
   const lan = Object.values(os.networkInterfaces()).flat().filter(i => i && i.family === 'IPv4' && !i.internal).map(i => i.address);
   console.log(`\nEmbeddingGemma 2 deck\n`);
+  // Different hosts on purpose: browsers share zoom per host, so this keeps the two tabs' zoom independent.
   console.log(`  Display (projector): http://localhost:${PORT}/`);
-  console.log(`  Remote (this laptop): http://localhost:${PORT}/remote?key=${KEY}`);
+  console.log(`  Remote (this laptop): http://127.0.0.1:${PORT}/remote?key=${KEY}`);
   lan.forEach(ip => console.log(`  Remote (phone, same Wi-Fi): http://${ip}:${PORT}/remote?key=${KEY}`));
   console.log(`\n  Remote key: ${KEY}   (set REMOTE_KEY to choose your own)\n`);
 });

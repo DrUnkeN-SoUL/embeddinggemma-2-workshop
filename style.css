@@ -218,3 +218,9 @@ body.blank #deck,body.blank header,body.blank footer{visibility:hidden}
 .vec-head{font-size:12.5px;color:var(--faint);text-align:right;margin-top:2px}
 .hand-compare{margin-top:12px;font-size:15.5px;color:var(--muted)}
 .hand-compare b{color:var(--ink);font-weight:500}
+
+/* Deck zoom indicator */
+#zoom-toast{position:fixed;right:24px;bottom:24px;background:#1b2433;color:#f1f3f5;font-size:15px;padding:8px 14px;border-radius:8px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:10}
+#zoom-toast.on{opacity:1}
+/* CSS zoom scales viewport units too, so divide the page height by the deck zoom to keep it full-screen. */
+body{height:calc(100dvh / var(--dz, 1))}
