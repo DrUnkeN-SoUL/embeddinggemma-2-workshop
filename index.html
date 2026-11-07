@@ -244,19 +244,19 @@
 </section>
 
 <section class="slide lab-slide" aria-label="Lab 1">
-<div class="kicker">Lab 1</div><h2>Your first embeddings</h2>
+<div class="kicker">Lab 1 · in the Colab notebook</div><h2>Your first embeddings, on real data</h2>
 <ol class="tasks">
-  <li><b>Embed five sentences</b> and print the shape. You should see <span class="mono">(5, 768)</span>.</li>
-  <li><b>Draw the similarity matrix.</b> Which pairs light up? Are any surprises?</li>
-  <li><b>With vs without prefixes.</b> Run the same search twice and compare the rankings.</li>
-  <li><b>Malayalam ↔ English.</b> Write a sentence in Malayalam (or Hindi, Tamil…) and find its English twin.</li>
-  <li><b>Plot your own map</b> with PCA, like the one we just saw.</li>
+  <li><b>Embed five sentences</b> and see the shape <span class="mono">(5, 768)</span>, then the <b>similarity heatmap</b>.</li>
+  <li><b>Do prefixes matter?</b> Search 1,000 Wikipedia answers with real Google questions (<b>Natural Questions</b>), with and without task prefixes.</li>
+  <li><b>Malayalam → English:</b> pick the right translation out of 300 (<b>OPUS-100</b>).</li>
+  <li><b>Map real news:</b> 400 <b>AG News</b> headlines from four sections, flattened to 2-D.</li>
 </ol>
-<p class="note">Stretch: add a sentence you think will confuse the model (sarcasm, a pun) and see where it lands.</p>
+<p class="note">Our test run on a free T4: search 98.1% top-1 with prefixes (97.8% without) · Malayalam → English 88.3%.</p>
 <aside class="notes">
-<h4>Run it</h4><p>Notebook section “Lab 1”. Walk the room. The heatmap cell is the “aha” moment for most people.</p>
-<h4>What they should notice</h4><ul><li>Diagonal = 1.0 (each sentence matches itself perfectly).</li><li>Without prefixes, rankings often still look OK but scores shift and quality drops on harder queries. The model card says omitting prefixes reduces quality.</li><li>Cross-lingual pairs score high even with zero shared characters.</li></ul>
-<div class="q"><b>Q: My scores are all between 0.3 and 0.7. Is that broken?</b>No. That’s normal. Only the ranking matters.</div>
+<h4>Run it</h4><p>Notebook section “Lab 1”. The heatmap and the news map are the “aha” moments.</p>
+<h4>What they should see (verified on a Colab T4, 7 Nov 2026)</h4><ul><li>Heatmap: the two food sentences and the two container sentences light up together.</li><li>Natural Questions, 1,000 passages: <b>98.1%</b> top-1 with prefixes, <b>97.8%</b> without, 100% in the top 10. On easy data the prefix gap is small; it matters more on harder, messier data. Be honest about that if asked.</li><li>OPUS-100 Malayalam → English: <b>88.3%</b> top-1 out of 300, with zero shared characters.</li><li>AG News: four colour groups separate, even though the model never saw the section labels.</li></ul>
+<h4>Datasets</h4><p>sentence-transformers/natural-questions · Helsinki-NLP/opus-100 (en-ml) · fancyzhx/ag_news. All public, no token needed.</p>
+<div class="q"><b>Q: My scores are all between 0.3 and 0.8. Is that broken?</b>No. That’s normal. Only the ranking matters.</div>
 </aside>
 </section>
 
@@ -488,17 +488,18 @@ q = model.encode(<span class="s">"shoes for monsoon trekking"</span>,
 </section>
 
 <section class="slide lab-slide" aria-label="Lab 2">
-<div class="kicker">Lab 2</div><h2>Edge trade-offs, measured</h2>
+<div class="kicker">Lab 2 · in the Colab notebook</div><h2>Edge trade-offs, measured</h2>
 <ol class="tasks">
-  <li><b>Shrink the vectors.</b> Search at 768, 512, 256 and 128 dims. When does the top result change?</li>
+  <li><b>Shrink the vectors</b> from 768 to 128 numbers and re-run the Natural Questions search. How much do you lose?</li>
   <li><b>Do the storage maths</b> for your own app: how many items, which size?</li>
-  <li><b>Time it.</b> Embeddings per second on GPU vs CPU in the same notebook.</li>
-  <li><b>Weigh the encoders.</b> Load text-only vs text + vision and compare the parameter counts.</li>
+  <li><b>Time it:</b> Wikipedia paragraphs per second on the GPU vs the CPU.</li>
+  <li><b>Weigh the encoders:</b> text-only vs text + vision parameter counts.</li>
+  <li><b>Run the phone build:</b> the quantized 165 MB LiteRT file, on Colab’s CPU.</li>
 </ol>
-<p class="note">Stretch: install <span class="mono">litert-lm</span> in Colab and run the quantized edge build on the CPU.</p>
+<p class="note">Our test run: 768 → 128 dims kept 97.8% top-1 (from 98.1%) with a 6× smaller index · 271M vs 439M parameters.</p>
 <aside class="notes">
-<h4>Run it</h4><p>Notebook section “Lab 2”. The MRL cell is the most important; skip the encoder cell if you’re short of time.</p>
-<h4>What they should notice</h4><ul><li>Top results usually stay the same down to 256-D, and sometimes even 128-D on simple text.</li><li>CPU is several times slower than the T4 GPU, but still fast enough for interactive search over small collections.</li></ul>
+<h4>What they should see (verified on a Colab T4)</h4><ul><li>Top-1: 768-D <b>98.1%</b>, 512-D 98.1%, 256-D 98.0%, 128-D <b>97.8%</b>. Index for 1M passages: 3.07 GB → 0.51 GB.</li><li>Speed: about <b>33 paragraphs/sec</b> on the T4 GPU in float32; under 1 per second for the full-precision model on Colab’s tiny shared CPU.</li><li>The quantized LiteRT text build answers in roughly <b>0.3–0.5 s</b> on that same weak CPU: that’s the edge tricks paying off. On a real laptop it’s about 85 ms (see the laptop demo).</li><li>Parameters: <b>271M</b> text-only, <b>439M</b> with vision.</li></ul>
+<p>If short on time, run only the first cell (shrinking vectors).</p>
 </aside>
 </section>
 
@@ -531,7 +532,7 @@ q = model.encode(<span class="s">"shoes for monsoon trekking"</span>,
 <section class="slide" aria-label="Demo: Android">
 <div class="kicker">Demo 1 · Android phone</div>
 <div class="split">
-  <div><h2>Google AI Edge Gallery</h2><p class="lede">Google’s open-source showcase app. Free on Google Play and the App Store.</p>
+  <div><h2>Google AI Edge Gallery</h2><p class="lede">Google’s open-source showcase app. Free on Google Play and the App Store, or install the official APK from <span class="mono">github.com/google-ai-edge/gallery/releases</span>.</p>
   <ol class="tasks">
     <li><b>Instant Media Search:</b> type “sunset on the beach” and watch results re-rank on every keystroke.</li>
     <li><b>Turn on airplane mode</b> and search again. It still works.</li>
@@ -541,7 +542,7 @@ q = model.encode(<span class="s">"shoes for monsoon trekking"</span>,
   <p class="note">Source: github.com/google-ai-edge/gallery</p></div>
 </div>
 <aside class="notes">
-<h4>Before the event (important)</h4><ul><li>Install Google AI Edge Gallery and download the EmbeddingGemma 2 model at home on good Wi-Fi.</li><li>Let Instant Media Search finish indexing your gallery in advance.</li><li><b>Prepare a “clean” photo set</b>: you’ll mirror your phone to the projector, so make sure no private photos come up. A separate album or a demo profile is safest.</li><li>Test screen mirroring (USB with scrcpy, or Cast) with the venue projector if you can.</li></ul>
+<h4>Before the event (important)</h4><ul><li>Install Google AI Edge Gallery from the Play Store, or sideload Google’s official APK from github.com/google-ai-edge/gallery/releases (v1.0.23, 4 Nov 2026). There’s a generic <span class="mono">ai_edge_gallery_app.apk</span> plus chip-specific builds: <span class="mono">_tensor_g5</span>/<span class="mono">_tensor_g6</span> for Pixel, <span class="mono">_sm8550</span>…<span class="mono">_sm8850</span> for Snapdragon, which can use the phone’s NPU.</li><li>Download the EmbeddingGemma 2 model inside the app at home on good Wi-Fi.</li><li>Let Instant Media Search finish indexing your gallery in advance.</li><li><b>Prepare a “clean” photo set</b>: you’ll mirror your phone to the projector, so make sure no private photos come up. A separate album or a demo profile is safest.</li><li>Test screen mirroring (USB with scrcpy, or Cast) with the venue projector if you can.</li></ul>
 <h4>Say</h4><p>Everything you saw in Colab is happening here inside the phone. Airplane mode proves nothing leaves the device.</p>
 <h4>Fallback</h4><p>If mirroring fails, show a screen recording you made in advance.</p>
 </aside>
@@ -628,18 +629,17 @@ client.embeddings.create(model=<span class="s">"…"</span>, input=<span class="
 </section>
 
 <section class="slide lab-slide" aria-label="Lab 3">
-<div class="kicker">Lab 3</div><h2>Build a mini offline search app</h2>
+<div class="kicker">Lab 3 · in the Colab notebook</div><h2>Build a mini search app on real data</h2>
 <ol class="tasks">
-  <li><b>Index a notes collection</b> (provided, or paste your own) with document prefixes at 256-D.</li>
-  <li><b>Search it</b> in English and Malayalam with a tiny search function.</li>
-  <li><b>Zero-shot router:</b> send support messages to the right team using only the team descriptions. No training data.</li>
-  <li><b>Photo search (stretch):</b> upload 5–10 of your own photos and search them with text.</li>
+  <li><b>Index Wikipedia:</b> 3,200 passages (<b>RAG Mini Wikipedia</b>) at 256 dims, then ask it questions.</li>
+  <li><b>Zero-shot router:</b> send real customer-support messages to one of 77 intents (<b>Banking77</b>) using only the intent names. No training.</li>
+  <li><b>Photo search:</b> find the right photo among 200 (<b>Flickr8k</b>) from a text description.</li>
+  <li><b>Your turn:</b> type your own support message and your own photo query.</li>
 </ol>
-<p class="note">Then Q&amp;A. Everything in this notebook also runs on a laptop; the only thing that changes on a phone is the runtime.</p>
+<p class="note">Our test run: Wikipedia indexed in 58 s (3.3 MB) · router 92.5% top-1 out of 77 · photo search 89.0% top-1, 100% top-5.</p>
 <aside class="notes">
-<h4>Run it</h4><p>Notebook section “Lab 3”. The router is the crowd favourite: ask people to type their own messages and see where they get routed.</p>
-<h4>Understand it</h4><p>The router embeds a short description of each team (“payments, refunds, invoices”) with the classification prefix, then picks the closest description for each message. Adding a new team is just adding a line. That’s the “zero-shot routing” Google mentions in the announcement.</p>
-<h4>Q&amp;A fallback questions to seed discussion</h4><ul><li>What would you build if your users’ data could never leave their phone?</li><li>Where would keyword search still beat embeddings?</li></ul>
+<h4>What they should see (verified on a Colab T4)</h4><ul><li>Wikipedia: 3,200 passages indexed in about a minute into a 3.3 MB index. The “exact answer text in top 3” check reports about 44%, but it’s strict string matching, so the real hit rate is higher. Show a couple of retrieved passages instead of dwelling on that number.</li><li>Banking77 router: <b>92.5%</b> top-1, <b>98.1%</b> top-3, versus 1.3% for random guessing. Caveat to say out loud: it’s a public benchmark the model may have seen in training, so real tickets will score lower.</li><li>Flickr8k: <b>89.0%</b> of captions find their exact photo first among 200; 100% within the top 5.</li></ul>
+<h4>Q&amp;A seeds</h4><ul><li>What would you build if your users’ data could never leave their phone?</li><li>Where would keyword search still beat embeddings?</li></ul>
 </aside>
 </section>
 
@@ -674,13 +674,15 @@ client.embeddings.create(model=<span class="s">"…"</span>, input=<span class="
 <section class="slide closing" aria-label="Thank you">
 <h1>Thank you</h1><p class="lede">Questions welcome. The slides, notebook and demo code are all in the repo.</p>
 <div class="links">
+  <a href="https://github.com/DrUnkeN-SoUL/embeddinggemma2-workshop" target="_blank" rel="noopener">Workshop repo</a>
+  <a href="https://colab.research.google.com/github/DrUnkeN-SoUL/embeddinggemma2-workshop/blob/main/workshop.ipynb" target="_blank" rel="noopener">Colab notebook</a>
   <a href="https://huggingface.co/google/embeddinggemma-2" target="_blank" rel="noopener">Model card</a>
   <a href="https://huggingface.co/litert-community/embeddinggemma-2-740m-litert-lm" target="_blank" rel="noopener">LiteRT build</a>
   <a href="https://developers.googleblog.com/google-ai-edge-with-embeddinggemma-2/" target="_blank" rel="noopener">Edge guide</a>
   <a href="https://github.com/google-ai-edge/gallery" target="_blank" rel="noopener">AI Edge Gallery</a>
   <a href="https://mathewsshaji.com" target="_blank" rel="noopener">mathewsshaji.com</a>
 </div>
-<p class="note" style="margin-top:28px">GDG Cochin · gdg.community.dev/gdg-cochin</p>
+<p class="note" style="margin-top:28px">github.com/DrUnkeN-SoUL/embeddinggemma2-workshop · GDG Cochin · gdg.community.dev/gdg-cochin</p>
 <aside class="notes"><h4>Say</h4><p>Thank the volunteers and venue. Remind people the notebook keeps working after today, and point them at the AI Edge Gallery app as the easiest thing to try at home.</p></aside>
 </section>
 
