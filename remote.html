@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Presenter Remote</title>
+<style>
+:root{color-scheme:dark;--bg:#05070a;--surface:#10141a;--surface-2:#171c24;--ink:#f1f3f5;--muted:#a3a9b3;--faint:#6d7480;--blue:#6ea0ff;--green:#7fcf98;--red:#f28b82;--yellow:#f6c344}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Arial,Helvetica,"Nirmala UI","Noto Sans Malayalam",sans-serif;display:grid;grid-template-rows:auto auto 1fr auto;height:100dvh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.top{display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--surface)}
+.status{width:10px;height:10px;border-radius:50%;background:var(--red);flex:none}
+.status.on{background:var(--green)}
+.timer{font-variant-numeric:tabular-nums;font-size:22px;font-weight:600}
+.timer.warn{color:var(--yellow)}.timer.over{color:var(--red)}
+.top button{margin-left:auto}
+.top button+button{margin-left:0}
+.now{padding:16px 18px 10px}
+.now .pos{font-size:13.5px;color:var(--muted)}
+.now h1{margin:4px 0 0;font-size:26px;font-weight:500;letter-spacing:-.01em}
+.now .step{display:inline-block;margin-top:8px;font-size:13.5px;color:#cfe0ff;background:#22406f;border-radius:6px;padding:2px 8px}
+.now .next{margin-top:8px;font-size:14px;color:var(--faint)}
+.notes{overflow:auto;padding:4px 18px 18px;font-size:17px;line-height:1.6;color:#dfe3e8}
+.notes h4{font-size:13.5px;color:var(--blue);margin:18px 0 6px;font-weight:600}
+.notes h4:first-child{margin-top:6px}
+.notes p{margin:0 0 10px}.notes ul{margin:0 0 10px;padding-left:20px}.notes li{margin:4px 0}
+.notes b{color:#fff}
+.notes .q{background:var(--surface);border-radius:10px;padding:10px 12px;margin:8px 0}
+.notes .q b{display:block;margin-bottom:4px;color:var(--yellow);font-weight:600}
+.notes .empty{color:var(--faint)}
+.controls{display:grid;grid-template-columns:1fr 1.6fr;gap:10px;padding:12px 18px 16px;background:var(--surface)}
+.controls .row{grid-column:1/-1;display:flex;gap:10px}
+button,select{font:inherit;color:var(--ink);background:var(--surface-2);border:0;border-radius:12px;padding:10px 14px;cursor:pointer}
+button:active{transform:scale(.98)}
+.big{font-size:22px;padding:22px 0}
+.next-btn{background:#1d4ea8}
+select{flex:1;min-width:0}
+.blank-on{background:#5a1f1f}
+.preview{display:none;margin-top:14px;aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#000;position:relative}
+.preview iframe{position:absolute;left:0;top:0;width:1600px;height:900px;border:0;transform-origin:0 0;pointer-events:none}
+.err{padding:12px 18px;background:#3a1a1a;color:#ffd7d3;display:none}
+@media(min-width:900px){.preview{display:block}body{grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr auto}.top{grid-column:1/-1}.now{grid-column:1;grid-row:2}.notes{grid-column:2;grid-row:2/4;padding-top:16px}.controls{grid-column:1;grid-row:3}}
+</style>
+</head>
+<body>
+<div class="top"><span class="status" id="status" title="Connection"></span><span class="timer" id="timer">00:00</span><button id="t-toggle">Start</button><button id="t-reset">Reset</button></div>
+<div class="err" id="err"></div>
+<section class="now"><div class="pos" id="pos">Waiting for the deck…</div><h1 id="label">Open the display page on the projector</h1><span class="step" id="step" hidden></span><div class="next" id="next"></div><div class="preview" id="preview-wrap"><iframe id="preview" title="What the audience sees" tabindex="-1"></iframe></div></section>
+<section class="notes" id="notes"><p class="empty">Speaker notes appear here.</p></section>
+<div class="controls">
+  <button class="big" id="prev" aria-label="Previous">←</button>
+  <button class="big next-btn" id="nextb" aria-label="Next">→</button>
+  <div class="row"><select id="jump" aria-label="Jump to slide"></select><button id="blank">Blank</button></div>
+</div>
+<script>
+const key = new URLSearchParams(location.search).get('key') || '';
+const $ = id => document.getElementById(id);
+let ws, state = null;
+
+function send(m) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); }
+function connect() {
+  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws?role=remote&key=${encodeURIComponent(key)}`);
+  ws.onopen = () => { $('status').classList.add('on'); $('err').style.display = 'none'; };
+  ws.onclose = () => { $('status').classList.remove('on'); if (!key) { $('err').textContent = 'Missing ?key= in the URL. Use the Remote URL printed by server.js.'; $('err').style.display = 'block'; return; } setTimeout(connect, 1500); };
+  ws.onmessage = e => { const m = JSON.parse(e.data); if (m.type === 'state') render(m); };
+}
+function render(m) {
+  const outlineChanged = !state || state.total !== m.total;
+  state = m;
+  $('pos').textContent = `Slide ${m.slide} of ${m.total}`;
+  $('label').textContent = m.label;
+  $('step').hidden = !m.step;
+  if (m.step) $('step').textContent = `Step ${m.step.i} of ${m.step.n}: → continues on this slide`;
+  $('next').textContent = m.next ? `Next: ${m.next}` : 'Last slide';
+  $('notes').innerHTML = m.notes || '<p class="empty">No notes for this slide.</p>';
+  $('blank').classList.toggle('blank-on', m.blank);
+  $('blank').textContent = m.blank ? 'Unblank' : 'Blank';
+  if (outlineChanged) $('jump').innerHTML = m.outline.map((l, i) => `<option value="${i + 1}">${i + 1}. ${l}</option>`).join('');
+  $('jump').value = m.slide;
+}
+$('prev').onclick = () => send({ type: 'nav', dir: -1 });
+$('nextb').onclick = () => send({ type: 'nav', dir: 1 });
+$('jump').onchange = e => send({ type: 'goto', slide: Number(e.target.value) });
+$('blank').onclick = () => send({ type: 'blank', on: !(state && state.blank) });
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'SELECT') return;
+  if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); send({ type: 'nav', dir: 1 }); }
+  if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); send({ type: 'nav', dir: -1 }); }
+  if (e.key.toLowerCase() === 'b') send({ type: 'blank', on: !(state && state.blank) });
+});
+
+// Elapsed-time timer: stays in this browser so a reload doesn't lose it.
+let start = null, elapsed = 0;
+try { const t = JSON.parse(localStorage.getItem('eg2-timer') || 'null'); if (t) { start = t.start; elapsed = t.elapsed; } } catch {}
+const save = () => { try { localStorage.setItem('eg2-timer', JSON.stringify({ start, elapsed })); } catch {} };
+function tick() {
+  const ms = elapsed + (start ? Date.now() - start : 0), s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600), mm = String(Math.floor(s / 60) % 60).padStart(2, '0'), ss = String(s % 60).padStart(2, '0');
+  $('timer').textContent = h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+  $('t-toggle').textContent = start ? 'Pause' : elapsed ? 'Resume' : 'Start';
+}
+$('t-toggle').onclick = () => { if (start) { elapsed += Date.now() - start; start = null; } else start = Date.now(); save(); tick(); };
+$('t-reset').onclick = () => { start = null; elapsed = 0; save(); tick(); };
+setInterval(tick, 500); tick();
+// Live preview of the projector (wide screens only); it mirrors the display, read-only.
+const wrap = $('preview-wrap'), frame = $('preview');
+function fit() { frame.style.transform = `scale(${wrap.clientWidth / 1600})`; }
+if (matchMedia('(min-width:900px)').matches && key) { frame.src = `/?preview&key=${encodeURIComponent(key)}`; }
+addEventListener('resize', fit); new ResizeObserver(fit).observe(wrap); fit();
+connect();
+</script>
+</body>
+</html>

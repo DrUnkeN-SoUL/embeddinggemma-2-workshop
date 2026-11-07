@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>EmbeddingGemma 2 Workshop</title><link rel="stylesheet" href="style.css?v=ws-1"></head>
+<body>
+<header><a class="brand" href="#1" aria-label="GDG Cochin — first slide"><img class="gdg-lockup" src="assets/gdg-lockup-clean.svg?v=footer-15" alt="Google Developer Groups"><span class="chapter-name">Cochin</span></a><span class="header-label">Learn. Build. Share.</span></header>
+<main id="deck">
+
+<!-- ===================== OPENING ===================== -->
+<section class="slide title-slide" aria-label="Title">
+<div class="kicker">GDG Cochin · Hands-on workshop</div>
+<h1>Search by meaning,<br>on the device in your pocket</h1>
+<p class="lede">A hands-on introduction to embeddings with EmbeddingGemma 2, Google’s open multimodal embedding model built for phones, laptops and browsers.</p>
+<div class="speaker-inline"><img src="assets/speaker-corrected.png" alt="Mathews Shaji"><div><strong>Mathews Shaji</strong><span>Cloud Engineer · CloudPositive</span></div></div>
+<aside class="notes">
+<h4>Say</h4><p>Welcome everyone. Over the next two hours we go from “what is an embedding?” to running a multimodal search model on a phone, in a browser and on a laptop CPU. Half of it is hands-on in Colab, so please have a laptop and a Google account ready.</p>
+<h4>Before you start</h4><ul><li>Start the timer on this remote.</li><li>Have the Colab link on the next-but-one slide ready to share in the group chat.</li><li>Phone demo pre-indexed, browser demo pre-loaded (see the demo slides’ notes).</li></ul>
+</aside>
+</section>
+
+<section class="slide about" aria-label="Speaker">
+<div><div class="kicker">Hello, everyone</div><h2>I’m Mathews</h2><p class="lede">Cloud Engineer at CloudPositive</p><p class="bio">I build multi-cloud systems, mostly in Python and Go, and volunteer with GDG Cochin.</p><a href="https://mathewsshaji.com" target="_blank" rel="noopener">mathewsshaji.com</a></div>
+<div class="portrait"><img src="assets/speaker-corrected.png" alt="Mathews Shaji, Cloud Engineer at CloudPositive"></div>
+<aside class="notes"><h4>Say</h4><p>Keep this under a minute. A good honest line: “I’m a cloud engineer, not an ML researcher. I learned this the same way you will today, by running it.” That sets a friendly tone and makes questions easier.</p></aside>
+</section>
+
+<section class="slide" aria-label="Workshop plan">
+<div class="kicker">Today</div><h2>What we’ll do today</h2>
+<div class="timeline">
+  <div class="box"><h3>Welcome &amp; setup</h3><p>Open the Colab notebook, switch on a GPU</p></div>
+  <div class="box"><h3>Embeddings from zero</h3><p>What they are, how they’re made, how search uses them</p></div>
+  <div class="box lab"><span class="tag">Lab 1</span><h3>Your first embeddings</h3><p>Similarity, prefixes, Malayalam ↔ English</p></div>
+  <div class="box"><h3>EmbeddingGemma 2 on the edge</h3><p>What makes a 740M model fit on a phone</p></div>
+  <div class="box lab"><span class="tag">Lab 2</span><h3>Edge trade-offs</h3><p>Shrink vectors, measure speed and memory</p></div>
+  <div class="box"><h3>Live on devices</h3><p>Android, browser and laptop CPU demos</p></div>
+  <div class="box lab"><span class="tag">Lab 3</span><h3>Build &amp; Q&amp;A</h3><p>A mini offline search app and a zero-shot router</p></div>
+</div>
+<aside class="notes">
+<h4>Say</h4><p>Walk the timeline left to right. Stress that the green blocks are hands-on: “If you get stuck in a lab, raise a hand, and volunteers will come round.”</p>
+<h4>Pacing tip</h4><p>If you’re running long after Part 2, shorten Lab 2: the vector-shrinking cell is the one that matters most.</p>
+</aside>
+</section>
+
+<section class="slide lab-slide" aria-label="Setup">
+<div class="kicker">Setup</div>
+<div class="split wide-right setup-split">
+  <div class="qr-box"><div id="colab-qr" data-url=""></div><p class="qr-caption" id="colab-qr-caption"></p></div>
+  <div><h2>Scan to open the notebook</h2>
+  <ol class="tasks">
+    <li><b>Scan the code</b> with your phone camera, or open the link on your laptop.</li>
+    <li><b>File → Save a copy in Drive</b>, so your changes are yours.</li>
+    <li><b>Runtime → Change runtime type → T4 GPU.</b> A CPU runtime also works, just slower.</li>
+    <li><b>Run the first two cells.</b> No Hugging Face token needed: the model is Apache 2.0 and not gated.</li>
+  </ol></div>
+</div>
+<aside class="notes">
+<h4>Set the link (once)</h4><p>Upload <span class="mono">workshop.ipynb</span> to GitHub or Drive, open it in Colab, copy the URL, and paste it into <span class="mono">data-url=""</span> on the <span class="mono">colab-qr</span> element in <span class="mono">index.html</span>. The QR code is generated in the page, so it works offline. Until the link is set, the slide shows a reminder instead of a code.</p>
+<h4>Say</h4><p>Start the download now, because it takes a couple of minutes on venue Wi-Fi. While it runs, I’ll explain what we’re downloading.</p>
+<h4>Understand it</h4><p>Colab gives everyone the same free GPU machine in the cloud. We use it for the labs so nobody fights with local installs. The <b>edge</b> part of the story we show live on real devices later.</p>
+<h4>Likely problems</h4><ul><li><b>“No GPU available”:</b> the free tier ran out. CPU is fine for every lab.</li><li><b>NaN in outputs:</b> someone forced float16. The notebook uses bf16 or fp32. Never fp16 for this model.</li><li><b>Slow download:</b> pair people up on one screen.</li></ul>
+</aside>
+</section>
+
+<!-- ===================== PART 1 ===================== -->
+<section class="slide section-slide" aria-label="Part 1: Embeddings from zero">
+<div class="num-big">Part 1</div><h1>Embeddings from zero</h1>
+<p class="lede">The problem keyword search can’t solve, and the idea that solves it.</p>
+<aside class="notes"><h4>Say</h4><p>No maths needed for this part. If you can picture points on a map, you can understand embeddings.</p></aside>
+</section>
+
+<section class="slide" aria-label="The problem">
+<div class="kicker">The problem</div><h2>Keyword search misses most of these</h2>
+<div class="grid g3">
+  <div class="box"><div class="label">Query</div><p class="query">“cheap flights to Kochi”</p></div>
+  <div class="box"><div class="label">Keyword search finds</div><ul class="hits"><li class="ok">Cheap flights to Kochi: deals</li><li class="miss">Budget airfare to COK</li><li class="miss">Low-cost tickets to Cochin</li><li class="miss">കൊച്ചിയിലേക്ക് കുറഞ്ഞ നിരക്കിൽ വിമാനം</li></ul></div>
+  <div class="box hi"><div class="label">Search by meaning finds</div><ul class="hits"><li class="ok">Cheap flights to Kochi: deals</li><li class="ok">Budget airfare to COK</li><li class="ok">Low-cost tickets to Cochin</li><li class="ok">കൊച്ചിയിലേക്ക് കുറഞ്ഞ നിരക്കിൽ വിമാനം</li></ul></div>
+</div>
+<p class="note">Synonyms (cheap / budget / low-cost), abbreviations (COK), spelling variants (Kochi / Cochin) and other languages all share a meaning, but not the same letters.</p>
+<aside class="notes">
+<h4>Say</h4><p>Ask the room: “How many of these four would a classic search box find?” Only the first, because it is the only one that shares the exact words.</p>
+<h4>Understand it</h4><p>Classic search (BM25, SQL <span class="mono">LIKE</span>, grep) counts overlapping words. It is fast and precise when people use the same words, and blind when they don’t. Embedding search compares <b>meaning</b> instead.</p>
+<div class="q"><b>Q: Is keyword search obsolete then?</b>No. Production systems often use both (“hybrid search”). Keywords are great for exact things like product codes and names; embeddings catch paraphrases.</div>
+</aside>
+</section>
+
+<section class="slide map-slide" aria-label="Build an embedding by hand">
+<div class="map-layout">
+  <div class="map-side">
+    <div class="kicker">Let’s build one by hand</div><h2>Describe food with numbers</h2>
+    <p class="map-caption" id="hand-caption"></p>
+    <div class="map-results" id="hand-panel"></div>
+    <div class="map-progress" id="hand-progress"></div>
+    <p class="map-source">Scores are our own rough ratings, made up for teaching.</p>
+  </div>
+  <svg id="hand-map" role="img" aria-label="Kerala dishes plotted by how spicy and how sweet they are"></svg>
+</div>
+<aside class="notes">
+<h4>Why start here</h4><p>“768-dimensional vector” means nothing to most people. Building a 2-number embedding by hand makes every later idea obvious: dimensions are questions, similarity is distance, search is “nearest point”, and more questions means better separation.</p>
+<h4>How this slide works</h4><p>→ advances through 7 steps on this slide:</p>
+<ol><li>Two questions: how spicy, how sweet. Appam appears.</li><li>Twelve dishes appear. Sweets cluster top-left, curries right.</li><li>Query “Something sweet after lunch” finds payasam, unniyappam, pazham pori.</li><li>Query “Something spicy for dinner” lands among the curries.</li><li>The flaw: puttu’s nearest neighbour is banana chips.</li><li>Add “Is it breakfast?”: puttu now matches idiyappam and appam. Each dish is a list of 3 numbers. That’s an embedding.</li><li>The model does this with 768 questions it learned itself.</li></ol>
+<h4>Make it interactive</h4><p>At step 2, ask the room: “Does anyone disagree with where I put mango pickle?” People will argue, which is the point: hand-picked questions and scores are subjective. A model learns them from data instead.</p>
+<div class="q"><b>Q: So does dimension 37 mean “breakfast”?</b>Usually not. The model’s 768 “questions” are not tidy human concepts. Meaning is spread across many dimensions at once. The analogy holds for the geometry, not for naming individual numbers.</div>
+</aside>
+</section>
+
+<section class="slide" aria-label="From 3 questions to 768">
+<div class="kicker">From our toy to the real thing</div><h2>Same idea, learned instead of hand-made</h2>
+<div class="grid g2">
+  <div class="box"><div class="label">Our dish embedding</div>
+    <div class="vector-demo" style="margin-top:4px"><div class="chip">Puttu</div><div class="arrow">→</div><div class="chip vec">[0.8, 1.2, 9]<small>spicy, sweet, breakfast</small></div></div>
+    <ul class="clean" style="margin-top:16px"><li>3 questions, chosen and named by us</li><li>Scores typed in by hand</li><li>Only works for food</li></ul></div>
+  <div class="box hi"><div class="label">EmbeddingGemma 2</div>
+    <div class="vector-demo" style="margin-top:4px"><div class="chip">“Puttu and kadala curry”</div><div class="arrow">→</div><div class="chip vec">[0.021, −0.113, …]<small>768 numbers (values illustrative)</small></div></div>
+    <ul class="clean" style="margin-top:16px"><li>768 questions, learned from millions of examples</li><li>Answers computed in milliseconds</li><li>Works for any text, code, photo, sound or video</li></ul></div>
+</div>
+<p class="note">Everything we just did still applies: similar things land close together, a query is just another point, and search means taking the nearest ones.</p>
+<aside class="notes">
+<h4>Say</h4><p>Nothing new here, just scale. Swap our three hand-made questions for 768 learned ones, and food for anything.</p>
+<h4>Understand it</h4><ul><li>The real vectors are also <b>normalized</b> (scaled to length 1), so we compare directions rather than raw distances. We’ll see why in two slides.</li><li>No single number has a human meaning. It’s the whole pattern that carries meaning.</li></ul>
+<div class="q"><b>Q: Why exactly 768?</b>It’s the model’s design choice: enough room to separate subtle differences, small enough to store and compare quickly. Later we’ll cut it to 256 or 128 with little loss.</div>
+</aside>
+</section>
+
+<section class="slide map-slide" aria-label="Embedding map">
+<div class="map-layout">
+  <div class="map-side">
+    <div class="kicker">Now with the real model</div><h2>30 sentences on a map</h2>
+    <p class="map-caption" id="map-caption"></p>
+    <div class="map-results" id="map-results"></div>
+    <div class="map-progress" id="map-progress"></div>
+    <p class="map-source" id="map-source"></p>
+  </div>
+  <svg id="embed-map" role="img" aria-label="Sentences plotted in a 2-D projection of embedding space"></svg>
+</div>
+<aside class="notes">
+<h4>How this slide works</h4><p>→ advances through 8 steps <b>on this slide</b> before moving on. The remote shows “Step x of 8”.</p>
+<ol><li>One sentence appears.</li><li>Food sentences join it: they cluster.</li><li>All 30 with topic labels.</li><li>Query “Where should I eat breakfast?” drops in; a ring reaches its 3 nearest.</li><li>A Malayalam query lands among English weather sentences.</li><li>“My container keeps crashing” finds the Kubernetes sentence with no shared words.</li><li>Snake boat race sits between Sports and Places.</li><li>Caveat: this is a 2-D shadow of 768-D.</li></ol>
+<h4>Understand it</h4><p>To draw 768-D on a screen we use <b>PCA</b> (principal component analysis): it finds the two directions along which the points spread out most and flattens everything onto them. Like a shadow of a 3-D object on a wall, it keeps the overall shape but distorts some distances.</p>
+<h4>Before the event</h4><p>Run <span class="mono">cd demo &amp;&amp; python build_map.py</span> so the map shows real model positions and real scores. Then check each step’s story still matches the picture, and edit <span class="mono">STEPS</span> in <span class="mono">map.js</span> if needed.</p>
+<div class="q"><b>Q: Are the colours from the model?</b>No. We coloured them by the topic we wrote them for. The model never saw the colours, yet the positions still group by topic. That’s the point.</div>
+</aside>
+</section>
+
+<section class="slide" aria-label="Measuring closeness">
+<div class="kicker">Measuring closeness</div>
+<div class="split wide-right">
+  <div><h2>Relevance is the angle between two arrows</h2>
+  <p class="lede">Treat each embedding as an arrow from the origin. Arrows pointing the same way mean the same thing.</p>
+  <div class="box" style="margin-top:24px"><p class="calc">cos θ = (a · b) / (‖a‖ ‖b‖)</p><p>The model normalizes vectors to length 1, so this is just the <b>dot product</b>: multiply matching numbers and add them up.</p></div></div>
+  <svg viewBox="0 0 660 260" role="img" aria-label="Three arrow pairs: same direction scores 1, right angle scores 0, opposite scores -1" style="width:100%">
+    <g font-family="Arial" font-size="16" fill="#a3a9b3" text-anchor="middle">
+      <g transform="translate(110,170)"><line x1="0" y1="0" x2="90" y2="-80" stroke="#6ea0ff" stroke-width="4" stroke-linecap="round"/><line x1="0" y1="0" x2="100" y2="-62" stroke="#f6c344" stroke-width="4" stroke-linecap="round"/><circle r="5" fill="#f1f3f5"/><text y="56" fill="#f1f3f5" font-size="22">≈ 0.9</text><text y="80">same meaning</text></g>
+      <g transform="translate(330,170)"><line x1="0" y1="0" x2="0" y2="-110" stroke="#6ea0ff" stroke-width="4" stroke-linecap="round"/><line x1="0" y1="0" x2="110" y2="0" stroke="#f6c344" stroke-width="4" stroke-linecap="round"/><circle r="5" fill="#f1f3f5"/><text y="56" fill="#f1f3f5" font-size="22">≈ 0</text><text y="80">unrelated</text></g>
+      <g transform="translate(550,140)"><line x1="0" y1="0" x2="-80" y2="0" stroke="#6ea0ff" stroke-width="4" stroke-linecap="round"/><line x1="0" y1="0" x2="80" y2="0" stroke="#f6c344" stroke-width="4" stroke-linecap="round"/><circle r="5" fill="#f1f3f5"/><text y="86" fill="#f1f3f5" font-size="22">−1</text><text y="110">opposite (rare)</text></g>
+    </g>
+  </svg>
+</div>
+<aside class="notes">
+<h4>Say</h4><p>Distance on the map and angle between arrows are two views of the same thing. We use the angle, called <b>cosine similarity</b>, because it ignores length and only cares about direction.</p>
+<h4>Understand it</h4><ul><li>The score runs from −1 to 1. In practice, real text embeddings mostly score between about 0.2 and 0.9; truly opposite vectors are rare.</li><li>Scores are <b>relative</b>: 0.55 is not “55% similar”. Use them to rank results, not as absolute truth, and pick thresholds by testing on your own data.</li><li>Because vectors are normalized, “cosine” and “dot product” give the same ranking, and dot products are very fast on any hardware.</li></ul>
+<div class="q"><b>Q: Cosine or Euclidean distance?</b>For normalized vectors they give the same ranking. Use whatever your vector database defaults to, as long as it matches how the model was trained (cosine here).</div>
+</aside>
+</section>
+
+<section class="slide" aria-label="How the model learns">
+<div class="kicker">How a model learns this</div><h2>Training pulls matching pairs together</h2>
+<div class="split">
+  <svg viewBox="0 0 620 300" role="img" aria-label="Before training, pairs are scattered; after training, each question sits next to its answer" style="width:100%">
+    <g font-family="Arial" font-size="15" fill="#a3a9b3" text-anchor="middle">
+      <text x="150" y="24" fill="#f1f3f5" font-size="17">Before training</text><text x="470" y="24" fill="#f1f3f5" font-size="17">After training</text>
+      <rect x="20" y="40" width="260" height="240" rx="12" fill="#10141a"/><rect x="340" y="40" width="260" height="240" rx="12" fill="#10141a"/>
+      <circle cx="70" cy="90" r="9" fill="#f6c344"/><circle cx="230" cy="240" r="9" fill="#f6c344" opacity=".55"/>
+      <circle cx="210" cy="80" r="9" fill="#6ea0ff"/><circle cx="90" cy="220" r="9" fill="#6ea0ff" opacity=".55"/>
+      <circle cx="150" cy="160" r="9" fill="#7fcf98"/><circle cx="240" cy="150" r="9" fill="#7fcf98" opacity=".55"/>
+      <circle cx="400" cy="100" r="9" fill="#f6c344"/><circle cx="424" cy="112" r="9" fill="#f6c344" opacity=".55"/>
+      <circle cx="540" cy="220" r="9" fill="#6ea0ff"/><circle cx="560" cy="236" r="9" fill="#6ea0ff" opacity=".55"/>
+      <circle cx="520" cy="90" r="9" fill="#7fcf98"/><circle cx="545" cy="98" r="9" fill="#7fcf98" opacity=".55"/>
+    </g>
+  </svg>
+  <div><div class="grid" style="margin-top:0"><div class="box"><h3>Positive pairs</h3><p>A question and its answer, a caption and its photo, a sentence and its translation. Training moves them <b>closer</b>.</p></div><div class="box"><h3>Negatives</h3><p>Everything else in the batch. Training pushes them <b>apart</b>. This is called <b>contrastive learning</b>.</p></div></div></div>
+</div>
+<p class="note">Solid dot = query, faded dot = its matching document. Repeat over millions of pairs and a map of meaning emerges.</p>
+<aside class="notes">
+<h4>Say</h4><p>Nobody hand-writes these 768 numbers. We show the model millions of pairs that should match, and every time it puts a matching pair far apart, it gets corrected. Over time it learns a layout where meaning equals position.</p>
+<h4>Understand it</h4><ul><li>This is why multilingual works: training includes translation pairs, so “rain” and “മഴ” are pulled to the same place.</li><li>It’s also why multimodal works in EmbeddingGemma 2: image–caption and audio–text pairs pull different modalities into one shared space.</li><li>Google says EmbeddingGemma 2 comes from the same research as its Gemini Embedding models, and it’s built on the Gemma 4 architecture.</li></ul>
+<div class="q"><b>Q: Can I train it on my own data?</b>Yes, fine-tuning with your own pairs (e.g. your FAQ questions → answers) is supported with sentence-transformers and Unsloth. Start without fine-tuning; only do it if evaluation on your data shows a gap.</div>
+</aside>
+</section>
+
+<section class="slide" aria-label="Inside the model">
+<div class="kicker">Under the hood</div><h2>How a sentence becomes a vector</h2>
+<div class="pipeline">
+  <div class="step"><span class="n">1</span><b>Prefix + text</b><p class="mono">task: search result | query: …</p></div>
+  <div class="step"><span class="n">2</span><b>Tokenizer</b><p>Splits text into sub-word pieces. 262K vocabulary, shared with Gemma 4</p></div>
+  <div class="step"><span class="n">3</span><b>Transformer</b><p>24 layers turn each token into a context-aware vector (width 512)</p></div>
+  <div class="step"><span class="n">4</span><b>Mean pooling</b><p>Average all token vectors into one</p></div>
+  <div class="step"><span class="n">5</span><b>Project + normalize</b><p>512 → 768 numbers, scaled to length 1</p></div>
+</div>
+<div class="grid g2">
+  <div class="box"><h3>Images, audio, video</h3><p>Have their own encoders (vision 170M, audio 300M parameters) that turn pixels and sound into “soft tokens”, which enter the same transformer at step 3.</p></div>
+  <div class="box"><h3>One forward pass</h3><p>Unlike a chatbot, there’s no word-by-word generation loop. One pass in, one vector out. That’s why it’s fast enough for phones.</p></div>
+</div>
+<aside class="notes">
+<h4>Say</h4><p>Five steps. The important ones for builders are 1 (you must add the right prefix) and 5 (output is always 768 numbers of length 1).</p>
+<h4>Understand it</h4><ul><li><b>Token:</b> a chunk of text, roughly a word or part of a word. “Kubernetes” may be 3 tokens.</li><li><b>Context-aware:</b> after the transformer, the vector for “bank” differs in “river bank” and “bank loan”.</li><li><b>Mean pooling:</b> the simplest way to turn many token vectors into one: average them.</li><li><b>Sliding window 1024:</b> most layers only look at nearby tokens (cheaper); every sixth layer looks at the whole input.</li></ul>
+<div class="q"><b>Q: Is it the same as Gemma 4 the chatbot?</b>It shares the architecture family and tokenizer, but it’s trained for a different job: producing vectors rather than generating text.</div>
+</aside>
+</section>
+
+<section class="slide" aria-label="Embedders and LLMs">
+<div class="kicker">Where embeddings fit</div><h2>LLMs write answers. Embedding models find things.</h2>
+<div class="grid g2">
+  <div class="box"><div class="label">Generative LLM (e.g. Gemma 4)</div><ul class="clean"><li>Produces text one token at a time</li><li>Good at reasoning and writing</li><li>Far too slow to read a million documents per question</li></ul></div>
+  <div class="box"><div class="label">Embedding model (EmbeddingGemma 2)</div><ul class="clean"><li>One forward pass gives one vector</li><li>Embed your documents once, store the vectors</li><li>Each query is one embedding plus fast maths</li></ul></div>
+</div>
+<div class="grid g4" style="margin-top:18px">
+  <div class="box"><span class="label">1 · Question</span><p>“What’s our leave policy?”</p></div>
+  <div class="box hi"><span class="label">2 · Embedder</span><p>Finds the 5 most relevant passages</p></div>
+  <div class="box"><span class="label">3 · LLM</span><p>Reads only those 5 and writes an answer</p></div>
+  <div class="box"><span class="label">= RAG</span><p>Retrieval-augmented generation</p></div>
+</div>
+<aside class="notes">
+<h4>Say</h4><p>RAG is the most common reason people use embeddings today. The LLM is smart but can’t read your whole company wiki for every question. The embedder is the librarian that hands it the right five pages.</p>
+<h4>Understand it</h4><p>Google pairs these on-device: EmbeddingGemma 2 for retrieval and <b>Gemma 4 E2B</b> for writing answers, both small enough for a phone. That’s a fully private RAG stack with no server at all.</p>
+<div class="q"><b>Q: Why not just give the LLM a huge context window?</b>Cost and speed: reading 1M tokens per question is slow and expensive, especially on a phone. Retrieval keeps the LLM’s input small and focused.</div>
+</aside>
+</section>
+
+<section class="slide" aria-label="What embeddings are used for">
+<div class="kicker">Beyond search</div><h2>What embeddings are used for</h2>
+<div class="grid g4">
+  <div class="box"><h3>Semantic search</h3><p>Search by meaning instead of keywords</p></div>
+  <div class="box"><h3>RAG</h3><p>Ground LLM answers in your own documents</p></div>
+  <div class="box"><h3>Recommendations</h3><p>“More like this” for articles, products, songs</p></div>
+  <div class="box"><h3>Clustering</h3><p>Group feedback or tickets into topics automatically</p></div>
+  <div class="box"><h3>Classification &amp; routing</h3><p>Send each message to the right team, even zero-shot</p></div>
+  <div class="box"><h3>Deduplication</h3><p>Catch near-duplicate posts, photos or bug reports</p></div>
+  <div class="box"><h3>Anomaly detection</h3><p>Flag items far from everything seen before</p></div>
+  <div class="box hi"><h3>Cross-modal search</h3><p>Text finds a photo, a voice memo finds a video clip</p></div>
+</div>
+<aside class="notes">
+<h4>Say</h4><p>Once you have vectors, many problems become “find nearby points” or “find far-away points”. Pick two that matter to the room and give an example.</p>
+<h4>Understand it</h4><ul><li><b>Zero-shot routing:</b> embed the label descriptions (“billing problem”, “app crash”) and route each message to the closest label. No training data needed. We do this in Lab 3.</li><li><b>Clustering:</b> run k-means on the vectors; each cluster is a topic.</li><li><b>Anomaly detection:</b> if a new item’s nearest neighbour is unusually far away, it’s unusual.</li></ul>
+</aside>
+</section>
+
+<section class="slide lab-slide" aria-label="Lab 1">
+<div class="kicker">Lab 1</div><h2>Your first embeddings</h2>
+<ol class="tasks">
+  <li><b>Embed five sentences</b> and print the shape. You should see <span class="mono">(5, 768)</span>.</li>
+  <li><b>Draw the similarity matrix.</b> Which pairs light up? Are any surprises?</li>
+  <li><b>With vs without prefixes.</b> Run the same search twice and compare the rankings.</li>
+  <li><b>Malayalam ↔ English.</b> Write a sentence in Malayalam (or Hindi, Tamil…) and find its English twin.</li>
+  <li><b>Plot your own map</b> with PCA, like the one we just saw.</li>
+</ol>
+<p class="note">Stretch: add a sentence you think will confuse the model (sarcasm, a pun) and see where it lands.</p>
+<aside class="notes">
+<h4>Run it</h4><p>Notebook section “Lab 1”. Walk the room. The heatmap cell is the “aha” moment for most people.</p>
+<h4>What they should notice</h4><ul><li>Diagonal = 1.0 (each sentence matches itself perfectly).</li><li>Without prefixes, rankings often still look OK but scores shift and quality drops on harder queries. The model card says omitting prefixes reduces quality.</li><li>Cross-lingual pairs score high even with zero shared characters.</li></ul>
+<div class="q"><b>Q: My scores are all between 0.3 and 0.7. Is that broken?</b>No. That’s normal. Only the ranking matters.</div>
+</aside>
+</section>
+
+<!-- ===================== PART 2 ===================== -->
+<section class="slide section-slide" aria-label="Part 2: EmbeddingGemma 2 on the edge">
+<div class="num-big">Part 2</div><h1>EmbeddingGemma 2 on the edge</h1>
+<p class="lede">What it is, why running it on the device pays off, and the four tricks that make a 740M-parameter model fit in a phone.</p>
+<aside class="notes"><h4>Say</h4><p>“Edge” just means the device in front of you: phone, laptop, browser, a small board. Not a data centre.</p></aside>
+</section>
+
+<section class="slide" aria-label="At a glance">
+<div class="kicker">Released 6 October 2026 · Google DeepMind</div><h2>EmbeddingGemma 2 at a glance</h2>
+<div class="stats">
+  <div class="box"><strong>740M</strong><span>parameters in total. The text-only core is just 270M.</span></div>
+  <div class="box"><strong>5 kinds of input</strong><span>Text, code, images, audio and video in one shared space.</span></div>
+  <div class="box"><strong>8K tokens</strong><span>Context window, 4× the first EmbeddingGemma.</span></div>
+  <div class="box"><strong>768 → 128</strong><span>Output can be shortened for up to 6× less storage.</span></div>
+  <div class="box"><strong>100+ languages</strong><span>Multilingual out of the box, including Malayalam.</span></div>
+  <div class="box"><strong>Apache 2.0</strong><span>Commercial use allowed, no gated download.</span></div>
+</div>
+<p class="note">Built on Gemma 4. Its predecessor, EmbeddingGemma (Sept 2025, 308M parameters, text only), passed 20 million downloads.</p>
+<aside class="notes">
+<h4>Say</h4><p>Version 1 was text only. Version 2 adds images, audio and video, quadruples the context and switches to the fully open Apache 2.0 licence.</p>
+<h4>Understand it</h4><ul><li><b>Parameters:</b> the learned numbers inside the model. More parameters means more memory. 740M is small by today’s standards: chat LLMs are often 7–70 <i>billion</i>.</li><li><b>Context window:</b> the maximum input length. 8K tokens is roughly 6,000 English words, or a mix like 29 images.</li><li><b>Licence:</b> v1 used the Gemma licence and needed you to accept terms on Hugging Face. v2 is Apache 2.0: download and ship it.</li></ul>
+<div class="q"><b>Q: Is there a bigger cloud version?</b>Yes: <b>Gemini Embedding 2</b>, an API model with up to 3072 dimensions. Use it when you want maximum quality and don’t mind sending data to an API. EmbeddingGemma 2 is the one you can run yourself.</div>
+</aside>
+</section>
+
+<section class="slide" aria-label="Edge gains">
+<div class="kicker">Why the edge</div><h2>What you gain by embedding on the device</h2>
+<div class="grid g3">
+  <div class="box"><h3>Privacy by default</h3><p>Photos, voice notes, health and company data are embedded where they live. Nothing is uploaded, so there’s nothing to leak and no consent screen to design.</p></div>
+  <div class="box"><h3>Milliseconds, not round-trips</h3><p>About <b>8 ms</b> per text on a Pixel 11 Pro. Fast enough to re-rank results on every keystroke, which is how the AI Edge Gallery app searches.</p></div>
+  <div class="box"><h3>Zero cost per call</h3><p>Index 10,000 notes or a whole photo library without an API bill. The user’s hardware does the work.</p></div>
+  <div class="box"><h3>Works offline</h3><p>On a flight, in a Munnar tea estate, in a basement server room. Search doesn’t depend on a signal.</p></div>
+  <div class="box"><h3>Always fresh</h3><p>New photos or messages are embedded the moment they arrive. No sync job, no stale server index.</p></div>
+  <div class="box"><h3>Scales with users</h3><p>A million users bring a million devices. Your server costs don’t grow with them.</p></div>
+</div>
+<aside class="notes">
+<h4>Say</h4><p>This is the core argument of the session. Pick the two that matter most for this audience: probably privacy and cost.</p>
+<h4>Understand it</h4><ul><li><b>Latency maths:</b> a cloud API call typically adds a network round-trip on top of compute. On-device, the 8.3 ms (Pixel 11 Pro, text, from the LiteRT model card) <i>is</i> the whole cost.</li><li><b>Index maths:</b> 10,000 notes × 8.3 ms ≈ 83 seconds to index everything on the phone.</li><li><b>Trade-off to admit honestly:</b> the device has less memory and battery. That’s why the next four slides are about shrinking the model.</li></ul>
+<div class="q"><b>Q: What about battery?</b>Embedding is a short burst (one forward pass), not a long generation loop. Index in the background while charging, like the photo apps already do for face grouping.</div>
+</aside>
+</section>
+
+<section class="slide" aria-label="Latency on real devices">
+<div class="kicker">Measured by Google · LiteRT-LM, average of 5 runs</div><h2>Text embedding latency, in milliseconds</h2>
+<div class="hbar">
+  <div class="k">RTX 4090 <small>Linux · GPU</small></div><div class="v"><i style="width:8.6%"></i><em style="left:calc(8.6% + 10px)">7.6 ms</em></div>
+  <div class="k">Pixel 11 Pro <small>Android · TPU</small></div><div class="v"><i style="width:9.4%"></i><em style="left:calc(9.4% + 10px)">8.3 ms</em></div>
+  <div class="k">MacBook Pro M5 <small>macOS · GPU</small></div><div class="v"><i style="width:10.8%"></i><em style="left:calc(10.8% + 10px)">9.5 ms</em></div>
+  <div class="k">iPhone 18 Pro <small>iOS · GPU</small></div><div class="v"><i style="width:13.2%"></i><em style="left:calc(13.2% + 10px)">11.6 ms</em></div>
+  <div class="k">Dell XPS 16 <small>Windows · NPU</small></div><div class="v"><i style="width:15.1%"></i><em style="left:calc(15.1% + 10px)">13.3 ms</em></div>
+  <div class="k">Arduino VENTUNO Q <small>IoT · NPU</small></div><div class="v"><i style="width:15.5%"></i><em style="left:calc(15.5% + 10px)">13.6 ms</em></div>
+  <div class="k">Chrome on MacBook M5 <small>Web · GPU</small></div><div class="v"><i style="width:24.8%"></i><em style="left:calc(24.8% + 10px)">21.8 ms</em></div>
+  <div class="k">Galaxy S26 Ultra <small>Android · GPU</small></div><div class="v"><i style="width:29.4%"></i><em style="left:calc(29.4% + 10px)">25.9 ms</em></div>
+  <div class="k">Jetson Orin Nano <small>IoT · GPU</small></div><div class="v"><i style="width:100%"></i><em style="right:10px;color:#fff">88 ms</em></div>
+</div>
+<p class="note">A phone’s TPU matches a desktop RTX 4090 for this job. Full multimodal input (text + vision + audio) takes longer: 149 ms on the Pixel, 150 ms on the iPhone. Source: litert-community/embeddinggemma-2-740m-litert-lm model card.</p>
+<aside class="notes">
+<h4>Say</h4><p>Look at the top two bars: a phone’s built-in AI chip is as fast as a gaming GPU for this task. And even a browser tab does it in about 22 ms.</p>
+<h4>Understand it</h4><ul><li><b>CPU / GPU / TPU / NPU:</b> CPU is the general processor. GPU is built for parallel maths. TPU and NPU are chips designed specifically for neural networks, found in recent phones and laptops.</li><li>These are Google’s published numbers for its quantized LiteRT build. Real apps vary with input length, heat and what else the phone is doing, so always measure on your target device.</li><li>A one-off cost not shown here: loading the model into memory the first time takes longer than a single embedding.</li></ul>
+<div class="q"><b>Q: What about my laptop with no GPU?</b>We’ll run exactly that in the laptop demo. It works, just slower than the GPU numbers here.</div>
+</aside>
+</section>
+
+<section class="slide" aria-label="Memory">
+<div class="kicker">Why it fits</div><h2>From 3 GB to under 200 MB</h2>
+<div class="split">
+  <div class="box"><div class="label">Weight memory for 740M parameters</div>
+    <p class="calc">740M × 4 bytes (float32) = <span class="r">2.96 GB</span><br>740M × 2 bytes (bfloat16) = <span class="r">1.48 GB</span><br>LiteRT bundle, quantized = <span class="r">485 MB</span><br>Text-only bundle (270M) = <span class="r">165 MB</span></p></div>
+  <div><div class="grid" style="margin-top:0">
+    <div class="box hi"><span class="big">~191 MB</span><p>active RAM, text only, quantized, on a Pixel 11 Pro</p></div>
+    <div class="box"><span class="big">~567 MB</span><p>active RAM with all encoders (text, vision, audio)</p></div>
+  </div></div>
+</div>
+<p class="note">Two tricks do most of the work: <b>quantization</b> (fewer bits per number) and <b>modular encoders</b> (load only what you need). Next two slides.</p>
+<aside class="notes">
+<h4>Say</h4><p>Every parameter is a number, and every number costs bytes. Store each one in 4 bytes and the model is 3 GB, too big for a phone app. The rest of this section is how Google cuts that down.</p>
+<h4>Understand it</h4><ul><li>The 191 MB and 567 MB figures are from Google’s announcement. The LiteRT model card lists per-backend memory that varies (e.g. 85 MB text-only on iPhone 18 Pro GPU, 334 MB on Galaxy S26 Ultra CPU), because each backend handles memory differently.</li><li>Download sizes from the LiteRT model card: 165 MB (text), 388 MB (text + vision), 485 MB (everything).</li></ul>
+<div class="q"><b>Q: Will it fit on a cheap phone?</b>The text-only build at about 200 MB fits on most modern phones. Test on the lowest-end device you want to support.</div>
+</aside>
+</section>
+
+<section class="slide" aria-label="Trick 1: Quantization">
+<div class="kicker">Edge trick 1</div><h2>Quantization: fewer bits per number</h2>
+<div class="grid g3">
+  <div class="box"><h3>bfloat16 · 16 bits</h3><p>65,536 possible values per weight. What we use in Colab.</p></div>
+  <div class="box"><h3>int8 · 8 bits</h3><p>256 values. Used for the vision encoder. 2× smaller than bf16.</p></div>
+  <div class="box hi"><h3>int4 · 4 bits</h3><p>Just 16 values. Used for the text transformer. 4× smaller than bf16.</p></div>
+</div>
+<div class="grid g2">
+  <div class="box"><h3>Plain quantization</h3><p>Train normally, then round every weight to the nearest allowed value. Quick, but rounding errors can hurt quality.</p></div>
+  <div class="box"><h3>Quantization-aware training (QAT)</h3><p>Simulate the rounding <b>during</b> training, so the model learns to work with it. EmbeddingGemma 2 uses QAT for int4 and int8.</p></div>
+</div>
+<p class="note">The LiteRT build mixes precisions: int4 for the transformer and embeddings, int8 for vision, a mix of int2/int4/int8 for audio, all per-channel (each output channel gets its own scale).</p>
+<aside class="notes">
+<h4>Say</h4><p>Imagine storing prices. You could write ₹1,234.5678, or just round to ₹1,235. You lose a little precision but save a lot of space. Quantization rounds the model’s numbers.</p>
+<h4>Understand it</h4><ul><li><b>int4</b> means each weight can only be one of 16 values. That sounds brutal, but each group of weights gets its own scale factor (“per-channel”), so the 16 levels are spread where they’re needed.</li><li><b>QAT vs post-training:</b> with QAT the model already “knows” it will be rounded, so it settles on weights that survive rounding. Quality loss is usually much smaller than rounding after the fact.</li><li>Google hasn’t published quality numbers for the quantized v2 bundle that I could find. Evaluate on your own data if accuracy matters.</li></ul>
+<div class="q"><b>Q: Can I quantize it myself?</b>You don’t need to: Google ships pre-quantized <span class="mono">.litertlm</span> files, and the community has GGUF builds for llama.cpp and Ollama.</div>
+</aside>
+</section>
+
+<section class="slide" aria-label="Trick 2: Modular encoders">
+<div class="kicker">Edge trick 2</div><h2>Modular encoders: load only what you need</h2>
+<table class="tbl">
+  <thead><tr><th>Your app needs</th><th>Parameters</th><th>LiteRT download</th><th>sentence-transformers config</th></tr></thead>
+  <tbody>
+    <tr><td>Text and code search</td><td class="num">270M</td><td class="num">165 MB</td><td class="mono">vision_config=None, audio_config=None</td></tr>
+    <tr><td>+ photos and video frames</td><td class="num">440M</td><td class="num">388 MB</td><td class="mono">audio_config=None</td></tr>
+    <tr><td>+ audio</td><td class="num">570M</td><td class="num">—</td><td class="mono">vision_config=None</td></tr>
+    <tr class="hi"><td>Everything</td><td class="num">740M</td><td class="num">485 MB</td><td class="mono">{}</td></tr>
+  </tbody>
+</table>
+<p class="note">Same vector space either way: text embedded by the 270M build can be compared with images embedded later by the 440M build.</p>
+<aside class="notes">
+<h4>Say</h4><p>Most apps only need text. Don’t ship the audio encoder to a notes app. The model is built as a text core plus optional plug-in encoders.</p>
+<h4>Understand it</h4><ul><li>Parameter split from the model card: text backbone 270M (130M transformer + 140M token embeddings), vision encoder 170M, audio encoder 300M.</li><li>“Token embeddings” here means the vocabulary lookup table: 262K tokens × 512 numbers is a big chunk of the text model.</li><li>The last column is how you choose this in Python. In LiteRT you pick the matching download.</li></ul>
+</aside>
+</section>
+
+<section class="slide" aria-label="Trick 3: Matryoshka">
+<div class="kicker">Edge trick 3 · Matryoshka Representation Learning</div><h2>Shorter vectors, small quality loss</h2>
+<div class="mrl">
+  <div class="h">Dims</div><div class="h">Text quality (MTEB multilingual)</div><div class="h">Multimodal quality (MMEB overall)</div>
+  <div class="d">768</div><div class="v"><i style="width:100%"></i><em>61.36</em></div><div class="v"><i style="width:100%"></i><em>59.01</em></div>
+  <div class="d">512</div><div class="v"><i style="width:99.7%"></i><em>61.17</em></div><div class="v"><i style="width:98.9%"></i><em>58.38</em></div>
+  <div class="d">256</div><div class="v"><i style="width:98.5%"></i><em>60.41</em></div><div class="v"><i style="width:95.3%"></i><em>56.24</em></div>
+  <div class="d">128</div><div class="v"><i style="width:94.3%"></i><em>57.89</em></div><div class="v warn"><i style="width:77.4%"></i><em>45.65</em></div>
+</div>
+<div class="grid g3">
+  <div class="box"><span class="label">10,000 photos on a phone</span><p class="calc">768-D: <span class="r">30.7 MB</span> · 256-D: <span class="r">10.2 MB</span></p></div>
+  <div class="box"><span class="label">1 million document chunks</span><p class="calc">768-D: <span class="r">3.07 GB</span> · 256-D: <span class="r">1.02 GB</span></p></div>
+  <div class="box"><span class="label">Rule of thumb</span><p>256-D is close to lossless for text. Keep 128-D for text-only work.</p></div>
+</div>
+<aside class="notes">
+<h4>Say</h4><p>Matryoshka are the Russian nesting dolls. The model is trained so the first 256 numbers are already a good embedding on their own, the first 512 a better one, and so on. You can just chop off the end.</p>
+<h4>Understand it</h4><ul><li><b>Storage maths:</b> items × dimensions × 4 bytes (float32). 10,000 × 768 × 4 = 30.7 MB.</li><li>Shorter vectors also make each comparison faster, which matters when you scan thousands of items on a phone.</li><li>Multimodal quality drops faster at 128-D (45.65 vs 59.01), which is why the advice is 128 for text only.</li><li>Always re-normalize after truncating (sentence-transformers does it with <span class="mono">normalize_embeddings=True</span>).</li></ul>
+<div class="q"><b>Q: Can I mix 768-D and 256-D vectors?</b>No. Pick one size for the whole index. You can truncate the stored 768-D vectors later without re-running the model, though.</div>
+</aside>
+</section>
+
+<section class="slide" aria-label="Trick 4: Token budgets">
+<div class="kicker">Edge trick 4</div><h2>Spend tokens wisely: one 8K budget for everything</h2>
+<div class="grid g4">
+  <div class="box"><span class="big">1 / word piece</span><p>Text and code</p></div>
+  <div class="box"><span class="big">280 / image</span><p>Default. ~29 images fit. Adjustable from 70 to 1120.</p></div>
+  <div class="box"><span class="big">140 / frame</span><p>Video at 1 frame per second. ~58 frames fit.</p></div>
+  <div class="box"><span class="big">25 / second</span><p>Audio, mono 16 kHz. ~5.5 minutes fit.</p></div>
+</div>
+<div class="grid g2">
+  <div class="box"><h3>Fewer vision tokens = faster</h3><p>Google’s latency tables use 70 tokens per image. Fine for “is this a beach photo?”, less detail for reading small text in a screenshot.</p></div>
+  <div class="box"><h3>Adaptive graphs</h3><p>The LiteRT runtime loads a graph sized to the actual input length and image size, so short inputs don’t pay for the full 8K.</p></div>
+</div>
+<aside class="notes">
+<h4>Say</h4><p>All inputs share one 8,192-token window. Images are the expensive part, so on a phone you turn the image detail down.</p>
+<h4>Understand it</h4><ul><li><b>Soft tokens:</b> images and audio don’t have words, so the encoders turn them into vectors that the transformer treats like tokens.</li><li>The LiteRT bundle supports 70 or 140 image tokens; the full Python model lets you set 70 to 1120.</li><li>For long videos, embed segments (e.g. every 10 seconds) separately rather than one huge input. That’s how the Video Moments Finder returns timestamps.</li></ul>
+</aside>
+</section>
+
+<section class="slide" aria-label="One space for every modality">
+<div class="kicker">Multimodal</div>
+<div class="split">
+  <div><h2>One vector space for text, images, audio and video</h2><p class="lede">Every input lands in the same 768-D space, so any modality can search any other. You can even mix them in a single input.</p></div>
+<pre class="code"><code><span class="c"># a product listing with text, photos and a video</span>
+emb = model.encode({
+  <span class="s">"text"</span>: <span class="s">"Waterproof running shoes. &lt;|image|&gt;
+     Breathable mesh upper. &lt;|image|&gt;
+     Grip test on wet rock: &lt;|video|&gt;"</span>,
+  <span class="s">"image"</span>: [<span class="s">"shoe.jpg"</span>, <span class="s">"mesh.jpg"</span>],
+  <span class="s">"video"</span>: <span class="s">"demo.mp4"</span>,
+})
+
+<span class="c"># later: a typed or spoken query finds it</span>
+q = model.encode(<span class="s">"shoes for monsoon trekking"</span>,
+                 prompt_name=<span class="s">"SearchQuery"</span>)</code></pre>
+</div>
+<div class="grid g3">
+  <div class="box"><h3>Text → photo</h3><p>“Onam pookalam” finds the photo, no captions needed.</p></div>
+  <div class="box"><h3>Voice → video</h3><p>A spoken question finds the moment in a lecture recording.</p></div>
+  <div class="box"><h3>Photo → product</h3><p>Snap a saree, find similar ones in the catalogue.</p></div>
+</div>
+<aside class="notes">
+<h4>Say</h4><p>This is what’s genuinely new in v2. Before, you needed separate models for text and images (like CLIP) and they lived in different spaces. Now one small model does all of it.</p>
+<h4>Understand it</h4><ul><li><span class="mono">&lt;|image|&gt;</span> placeholders mark where each image sits in the text, so the model knows which caption belongs to which picture.</li><li>No prefix is used for images, audio and video: prefixes are for text only.</li></ul>
+</aside>
+</section>
+
+<section class="slide" aria-label="Benchmarks">
+<div class="kicker">How good is it?</div><h2>Benchmarks vs EmbeddingGemma 1</h2>
+<div class="grid g2">
+  <table class="tbl"><thead><tr><th>Benchmark</th><th class="num">v1</th><th class="num">v2</th></tr></thead><tbody>
+    <tr><td>MTEB multilingual (text)</td><td class="num">61.15</td><td class="num">61.36</td></tr>
+    <tr class="hi"><td>MTEB code (NDCG@10)</td><td class="num">68.76</td><td class="num">78.68 <small>+9.9</small></td></tr></tbody></table>
+  <table class="tbl"><thead><tr><th>New in v2</th><th class="num">Score</th></tr></thead><tbody>
+    <tr><td>MIEB lite (images)</td><td class="num">65.67</td></tr>
+    <tr><td>MMEB v2 image (Hit@1)</td><td class="num">57.28</td></tr>
+    <tr><td>MMEB v2 visual documents (NDCG@5)</td><td class="num">67.84</td></tr>
+    <tr><td>MMEB v2 video (Hit@1)</td><td class="num">50.67</td></tr>
+    <tr><td>MAEB (audio)</td><td class="num">49.87</td></tr></tbody></table>
+</div>
+<p class="note">Text quality holds, code search jumps almost 10 points, and images, video and audio are new. 768-D, full precision, from the model card. Google reports leading scores among multimodal embedders under 1B parameters on MTEB Code and MAEB.</p>
+<aside class="notes">
+<h4>Say</h4><p>Benchmarks are standard test sets that everyone scores their models on. The headline is the code jump: almost 10 points. That makes it a strong choice for local code search and coding agents.</p>
+<h4>Understand it</h4><ul><li><b>MTEB</b> (Massive Text Embedding Benchmark) is the standard leaderboard for text embeddings, covering retrieval, clustering, classification and more.</li><li><b>NDCG@10:</b> how well the top 10 results are ordered (1.0 = perfect). <b>Hit@1:</b> how often the very first result is correct.</li><li>Scores from different benchmarks aren’t comparable to each other. Compare models on the same benchmark only.</li></ul>
+<div class="q"><b>Q: Is it the best embedding model?</b>Not overall: much bigger models score higher. It’s among the best for its size, which is what matters on a phone. Always test on your own data too.</div>
+</aside>
+</section>
+
+<section class="slide" aria-label="Task prefixes">
+<div class="kicker">The #1 mistake</div><h2>Tell the model what the vector is for</h2>
+<table class="tbl">
+  <thead><tr><th>Use case</th><th>Query side</th><th>Document side</th></tr></thead>
+  <tbody>
+    <tr><td>Search</td><td class="mono">task: search result | query: …</td><td class="mono">title: none | text: …</td></tr>
+    <tr><td>Question answering</td><td class="mono">task: question answering | query: …</td><td class="mono">title: none | text: …</td></tr>
+    <tr><td>Code retrieval</td><td class="mono">task: code retrieval | query: …</td><td class="mono">title: {filename} | text: …</td></tr>
+    <tr><td>Classification, clustering, similarity</td><td class="mono" colspan="2">task: classification | query: …   (same prefix on both sides)</td></tr>
+  </tbody>
+</table>
+<div class="grid g2">
+  <div class="box"><h3>In Python</h3><p>Let sentence-transformers add them: <span class="mono">prompt_name="SearchQuery"</span> for queries, <span class="mono">"Document"</span> for documents.</p></div>
+  <div class="box"><h3>Check your runtime’s docs</h3><p>The LiteRT-LM guide writes them differently (e.g. <span class="mono">task: search query | text: …</span>). Use the format your runtime documents, and test.</p></div>
+</div>
+<aside class="notes">
+<h4>Say</h4><p>Queries and documents are different things: a query is short and a question, a document is long and an answer. Prefixes tell the model which one it’s looking at, so it can put them in the right place.</p>
+<h4>Understand it</h4><ul><li><b>Asymmetric</b> tasks (search, Q&amp;A) use different prefixes on each side. <b>Symmetric</b> tasks (clustering, similarity) use the same prefix for everything.</li><li>Forgetting prefixes doesn’t throw an error, it just quietly lowers quality. That’s why it’s the #1 mistake.</li><li>Honest note: the model card and the LiteRT-LM page show slightly different prefix wording. I’d follow the model card for Python and the LiteRT docs for LiteRT, and compare results on your own data.</li></ul>
+</aside>
+</section>
+
+<section class="slide lab-slide" aria-label="Lab 2">
+<div class="kicker">Lab 2</div><h2>Edge trade-offs, measured</h2>
+<ol class="tasks">
+  <li><b>Shrink the vectors.</b> Search at 768, 512, 256 and 128 dims. When does the top result change?</li>
+  <li><b>Do the storage maths</b> for your own app: how many items, which size?</li>
+  <li><b>Time it.</b> Embeddings per second on GPU vs CPU in the same notebook.</li>
+  <li><b>Weigh the encoders.</b> Load text-only vs text + vision and compare the parameter counts.</li>
+</ol>
+<p class="note">Stretch: install <span class="mono">litert-lm</span> in Colab and run the quantized edge build on the CPU.</p>
+<aside class="notes">
+<h4>Run it</h4><p>Notebook section “Lab 2”. The MRL cell is the most important; skip the encoder cell if you’re short of time.</p>
+<h4>What they should notice</h4><ul><li>Top results usually stay the same down to 256-D, and sometimes even 128-D on simple text.</li><li>CPU is several times slower than the T4 GPU, but still fast enough for interactive search over small collections.</li></ul>
+</aside>
+</section>
+
+<!-- ===================== PART 3 ===================== -->
+<section class="slide section-slide" aria-label="Part 3: Live on devices">
+<div class="num-big">Part 3</div><h1>Live on devices</h1>
+<p class="lede">The same model on an Android phone, in a browser tab and on a laptop CPU.</p>
+<aside class="notes"><h4>Say</h4><p>Enough Colab. Now we take the model off the cloud and onto things you own.</p></aside>
+</section>
+
+<section class="slide" aria-label="Where it runs">
+<div class="kicker">Deployment map</div><h2>Pick the runtime for your platform</h2>
+<table class="tbl">
+  <thead><tr><th>Platform</th><th>Use</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Android, iOS</td><td>LiteRT-LM · MediaPipe Universal Embedder + Semantic Retriever</td><td>Pre-quantized <span class="mono">.litertlm</span> files. ML Kit with NPU support is announced as coming</td></tr>
+    <tr><td>Browser</td><td>LiteRT-LM web (<span class="mono">@litert-lm/core</span>) · transformers.js</td><td>WebGPU or WASM. Chrome recommended</td></tr>
+    <tr><td>Laptop, desktop</td><td><span class="mono">litert-lm serve</span> · Ollama · llama.cpp · LM Studio · MLX</td><td>Ollama and llama.cpp use community GGUF builds for now</td></tr>
+    <tr><td>Server, Colab</td><td>sentence-transformers · transformers · vLLM · SGLang</td><td>Full-precision weights from Hugging Face or Kaggle</td></tr>
+    <tr><td>Small boards</td><td>LiteRT-LM</td><td>Benchmarked on Jetson Orin Nano and Arduino VENTUNO Q</td></tr>
+  </tbody>
+</table>
+<p class="note">Store vectors in SQLite (what the Gallery app does), Qdrant, or any vector database.</p>
+<aside class="notes">
+<h4>Say</h4><p>One model, many runtimes. LiteRT is Google’s on-device runtime (formerly TensorFlow Lite); LiteRT-LM is its layer for language and embedding models.</p>
+<h4>Understand it</h4><ul><li><b>MediaPipe Tasks</b> are ready-made building blocks: Universal Embedder handles resizing, normalization and tokenization; Semantic Retriever does on-device nearest-neighbour search (Google says single-digit milliseconds).</li><li><b>GGUF</b> is the file format used by llama.cpp and Ollama. Community GGUFs are made by volunteers, not Google, so test before relying on one.</li><li><b>ML Kit</b> would let Android apps use a system-provided model without bundling it in the APK. Google announced it as coming “in the coming weeks” in October 2026, so check its status before the talk.</li></ul>
+</aside>
+</section>
+
+<section class="slide" aria-label="Demo: Android">
+<div class="kicker">Demo 1 · Android phone</div>
+<div class="split">
+  <div><h2>Google AI Edge Gallery</h2><p class="lede">Google’s open-source showcase app. Free on Google Play and the App Store.</p>
+  <ol class="tasks">
+    <li><b>Instant Media Search:</b> type “sunset on the beach” and watch results re-rank on every keystroke.</li>
+    <li><b>Turn on airplane mode</b> and search again. It still works.</li>
+    <li><b>Video Moments Finder:</b> type a phrase, get the timestamp in a video. No captions or transcripts needed.</li>
+  </ol></div>
+  <div class="box"><div class="label">How it works inside</div><ul class="clean"><li>Every photo is embedded on the phone once</li><li>Vectors are stored in a local SQLite database</li><li>Each keystroke embeds the query (text: ~8 ms on a Pixel 11 Pro)</li><li>Ranked by cosine similarity</li><li>Video: keyframes and audio chunks are embedded separately, so a match points to a timestamp</li></ul>
+  <p class="note">Source: github.com/google-ai-edge/gallery</p></div>
+</div>
+<aside class="notes">
+<h4>Before the event (important)</h4><ul><li>Install Google AI Edge Gallery and download the EmbeddingGemma 2 model at home on good Wi-Fi.</li><li>Let Instant Media Search finish indexing your gallery in advance.</li><li><b>Prepare a “clean” photo set</b>: you’ll mirror your phone to the projector, so make sure no private photos come up. A separate album or a demo profile is safest.</li><li>Test screen mirroring (USB with scrcpy, or Cast) with the venue projector if you can.</li></ul>
+<h4>Say</h4><p>Everything you saw in Colab is happening here inside the phone. Airplane mode proves nothing leaves the device.</p>
+<h4>Fallback</h4><p>If mirroring fails, show a screen recording you made in advance.</p>
+</aside>
+</section>
+
+<section class="slide" aria-label="Demo: Browser">
+<div class="kicker">Demo 2 · In the browser</div>
+<div class="split">
+  <div><h2>No install, just a tab</h2><p class="lede">The LiteRT-LM web demo runs EmbeddingGemma 2 on WebGPU (or WASM as a fallback) inside Chrome.</p>
+  <div class="box" style="margin-top:22px"><div class="label">Open</div><p class="mono" style="font-size:14px;color:#cfe0ff">google-ai-edge.github.io/LiteRT-LM/web_demos/embedding_search/</p></div>
+  <p class="note">Google’s measurement: about 21.8 ms per text embedding in Chrome on a MacBook M5.</p></div>
+<pre class="code"><code><span class="k">import</span> { EmbeddingEngine } <span class="k">from</span> <span class="s">'@litert-lm/core'</span>;
+
+<span class="k">const</span> engine = <span class="k">await</span> EmbeddingEngine.create({
+  model: <span class="s">'https://huggingface.co/litert-community/'</span> +
+    <span class="s">'embeddinggemma-2-740m-litert-lm/resolve/main/'</span> +
+    <span class="s">'embeddinggemma-2-740m.litertlm'</span>,
+});
+
+<span class="k">const</span> { embedding } = <span class="k">await</span> engine.computeEmbedding(
+  <span class="s">'task: search query | text: Top places in Kochi'</span>,
+  { normalize: <span class="k">true</span> },
+);
+console.log(embedding.length);</code></pre>
+</div>
+<aside class="notes">
+<h4>Before the event</h4><ul><li>Open the demo in Chrome at home so the model (hundreds of MB) is cached. Venue Wi-Fi will not like 60 people downloading it at once.</li><li>Check chrome://gpu shows WebGPU enabled on your laptop.</li></ul>
+<h4>Say</h4><p>This is the most “edge” demo for a developer audience: any user with a browser can run the model, and your server never sees their data.</p>
+<h4>Understand it</h4><ul><li><b>WebGPU</b> lets a web page use the graphics card for maths. <b>WASM</b> (WebAssembly) runs fast compiled code on the CPU when WebGPU isn’t available.</li><li>The first visit downloads the model; after that it loads from the browser cache.</li><li>The code is from Google’s LiteRT-LM embedding guide. Note it uses the LiteRT prefix style.</li></ul>
+<div class="q"><b>Q: Does it work in Firefox or Safari?</b>WebGPU support varies by browser and version. Chrome is the safe choice for the demo; WASM is the fallback elsewhere.</div>
+</aside>
+</section>
+
+<section class="slide" aria-label="Demo: Laptop CPU">
+<div class="kicker">Demo 3 · Laptop, CPU only</div>
+<div class="split">
+  <div><h2>A local embedding server with an OpenAI-style API</h2><p class="lede"><span class="mono">litert-lm serve</span> exposes <span class="mono">/v1/embeddings</span>, so tools that already speak the OpenAI API can use the local model unchanged.</p>
+  <div class="box" style="margin-top:22px"><div class="label">Alternative: Ollama with a community GGUF</div><p class="mono" style="font-size:13.5px;color:#cfe0ff">ollama pull hf.co/&lt;user&gt;/EmbeddingGemma-2-GGUF:Q8_0</p><p>Community builds, not official. Test before relying on them.</p></div></div>
+<pre class="code"><code><span class="c">$ pip install litert-lm==0.18.0</span>
+<span class="c">$ litert-lm serve --host 127.0.0.1 --port 9379</span>
+
+<span class="c">$ curl -X POST http://127.0.0.1:9379/v1/embeddings \</span>
+<span class="c">  -H "Content-Type: application/json" \</span>
+<span class="c">  -d '{"model": "embedding-gemma-v2.litertlm,gpu",</span>
+<span class="c">       "input": "task: search query | text: hello"}'</span>
+
+<span class="c"># Python, using the OpenAI client:</span>
+<span class="k">from</span> openai <span class="k">import</span> OpenAI
+client = OpenAI(base_url=<span class="s">"http://127.0.0.1:9379/v1"</span>,
+                api_key=<span class="s">"local"</span>)
+client.embeddings.create(model=<span class="s">"…"</span>, input=<span class="s">"…"</span>)</code></pre>
+</div>
+<aside class="notes">
+<h4>Before the event</h4><ul><li>Install and run this on your laptop at home and confirm the exact model string. Google’s example uses <span class="mono">embedding-gemma-v2.litertlm,gpu</span>; for a CPU-only demo, check the LiteRT-LM CLI docs for the CPU backend name.</li><li>Pre-download the model so the demo doesn’t depend on Wi-Fi.</li></ul>
+<h4>Say</h4><p>Any laptop in this room can be an embedding server. Because the API matches OpenAI’s, LangChain, LlamaIndex and your own scripts can point at <span class="mono">localhost</span> instead of a paid API.</p>
+<h4>Understand it</h4><p>“OpenAI-compatible” just means the request and response JSON look the same as OpenAI’s embeddings endpoint. It’s become an industry convention for local model servers (Ollama and LM Studio do the same).</p>
+</aside>
+</section>
+
+<section class="slide" aria-label="Anatomy of an on-device search app">
+<div class="kicker">Putting it together</div><h2>Anatomy of an on-device search app</h2>
+<div class="grid g2">
+  <div class="box"><div class="label">When content arrives (once per item)</div>
+    <div class="pipeline" style="grid-template-columns:repeat(4,1fr);margin-top:8px">
+      <div class="step"><b>New item</b><p>Note, photo, PDF page, audio clip</p></div>
+      <div class="step"><b>Prepare</b><p>Split long text into chunks; resize images</p></div>
+      <div class="step"><b>Embed</b><p>Document prefix, 256-D</p></div>
+      <div class="step"><b>Store</b><p>id + vector in SQLite</p></div>
+    </div></div>
+  <div class="box hi"><div class="label">When the user searches (every keystroke)</div>
+    <div class="pipeline" style="grid-template-columns:repeat(4,1fr);margin-top:8px">
+      <div class="step"><b>Query</b><p>Typed, spoken or a photo</p></div>
+      <div class="step"><b>Embed</b><p>Query prefix, same size</p></div>
+      <div class="step"><b>Compare</b><p>Dot product with stored vectors</p></div>
+      <div class="step"><b>Top-k</b><p>Show results, or pass to Gemma 4 E2B for an answer</p></div>
+    </div></div>
+</div>
+<p class="note">For thousands of items, comparing against every vector is fine. For much larger collections, use an approximate nearest-neighbour index (MediaPipe Semantic Retriever, Qdrant, sqlite-vec).</p>
+<aside class="notes">
+<h4>Say</h4><p>Every app we’ve shown follows this pattern. The expensive part (embedding documents) happens once; searching is cheap.</p>
+<h4>Understand it</h4><ul><li><b>Chunking:</b> split long documents into pieces of a few hundred words, so each vector represents one idea. One vector for a 50-page PDF would be too blurry.</li><li><b>Brute force vs ANN:</b> brute force compares the query with every stored vector: exact and simple. ANN (approximate nearest neighbour) indexes skip most comparisons: much faster at scale, very slightly less exact.</li><li><b>Keep the model fixed:</b> if you upgrade the model or change dimensions, you must re-embed everything.</li></ul>
+</aside>
+</section>
+
+<section class="slide lab-slide" aria-label="Lab 3">
+<div class="kicker">Lab 3</div><h2>Build a mini offline search app</h2>
+<ol class="tasks">
+  <li><b>Index a notes collection</b> (provided, or paste your own) with document prefixes at 256-D.</li>
+  <li><b>Search it</b> in English and Malayalam with a tiny search function.</li>
+  <li><b>Zero-shot router:</b> send support messages to the right team using only the team descriptions. No training data.</li>
+  <li><b>Photo search (stretch):</b> upload 5–10 of your own photos and search them with text.</li>
+</ol>
+<p class="note">Then Q&amp;A. Everything in this notebook also runs on a laptop; the only thing that changes on a phone is the runtime.</p>
+<aside class="notes">
+<h4>Run it</h4><p>Notebook section “Lab 3”. The router is the crowd favourite: ask people to type their own messages and see where they get routed.</p>
+<h4>Understand it</h4><p>The router embeds a short description of each team (“payments, refunds, invoices”) with the classification prefix, then picks the closest description for each message. Adding a new team is just adding a line. That’s the “zero-shot routing” Google mentions in the announcement.</p>
+<h4>Q&amp;A fallback questions to seed discussion</h4><ul><li>What would you build if your users’ data could never leave their phone?</li><li>Where would keyword search still beat embeddings?</li></ul>
+</aside>
+</section>
+
+<section class="slide" aria-label="Use cases">
+<div class="kicker">Ideas to take home</div><h2>Things you could build next week</h2>
+<div class="grid g3">
+  <div class="box"><h3>Offline gallery search</h3><p>“Photos of the Onam pookalam”, with nothing uploaded.</p></div>
+  <div class="box"><h3>Meeting and voice-note search</h3><p>Type a question, jump to the moment it was said. Google’s experimental Foresight app does this with Gemma 4.</p></div>
+  <div class="box"><h3>Code search for agents</h3><p>Local retrieval that hands coding agents the right files. Code search is v2’s biggest gain.</p></div>
+  <div class="box"><h3>Malayalam + English support desk</h3><p>Route and deduplicate tickets by meaning, in either language.</p></div>
+  <div class="box"><h3>Private company RAG</h3><p>HR, legal and finance documents answered on a laptop, never sent to an API.</p></div>
+  <div class="box"><h3>Visual product search</h3><p>“Like this saree, but in blue”: photo plus text in one query.</p></div>
+</div>
+<aside class="notes"><h4>Say</h4><p>Pick one or two and ask who in the room is working on something similar. It’s a good bridge into Q&amp;A.</p></aside>
+</section>
+
+<section class="slide" aria-label="Things to watch for">
+<div class="kicker">Before you ship</div><h2>Six things to watch for</h2>
+<div class="grid g3">
+  <div class="box"><h3>Use the task prefixes</h3><p>Queries and documents need different ones. Missing prefixes fail silently.</p></div>
+  <div class="box"><h3>bf16 or fp32, never fp16</h3><p>float16 can produce NaN or degraded vectors without any error.</p></div>
+  <div class="box"><h3>Same model on both sides</h3><p>Changing model, build or dimensions means re-embedding the whole index.</p></div>
+  <div class="box"><h3>8K tokens are shared</h3><p>One image ≈ 280 tokens, one second of audio ≈ 25. Budget mixed inputs.</p></div>
+  <div class="box"><h3>Quality varies by language</h3><p>Evaluate on your own data, Malayalam included, before you promise anything.</p></div>
+  <div class="box"><h3>Not safety-tuned</h3><p>Add filtering and access control in your app, especially for RAG.</p></div>
+</div>
+<aside class="notes">
+<h4>Understand it</h4><ul><li>The fp16 warning and “not safety-tuned” are both from the model card.</li><li><b>Access control in RAG:</b> the embedder will happily retrieve a salary spreadsheet for an intern’s question. Filter search results by what the user is allowed to see <i>before</i> they reach the LLM.</li></ul>
+</aside>
+</section>
+
+<section class="slide closing" aria-label="Thank you">
+<h1>Thank you</h1><p class="lede">Questions welcome. The slides, notebook and demo code are all in the repo.</p>
+<div class="links">
+  <a href="https://huggingface.co/google/embeddinggemma-2" target="_blank" rel="noopener">Model card</a>
+  <a href="https://huggingface.co/litert-community/embeddinggemma-2-740m-litert-lm" target="_blank" rel="noopener">LiteRT build</a>
+  <a href="https://developers.googleblog.com/google-ai-edge-with-embeddinggemma-2/" target="_blank" rel="noopener">Edge guide</a>
+  <a href="https://github.com/google-ai-edge/gallery" target="_blank" rel="noopener">AI Edge Gallery</a>
+  <a href="https://mathewsshaji.com" target="_blank" rel="noopener">mathewsshaji.com</a>
+</div>
+<p class="note" style="margin-top:28px">GDG Cochin · gdg.community.dev/gdg-cochin</p>
+<aside class="notes"><h4>Say</h4><p>Thank the volunteers and venue. Remind people the notebook keeps working after today, and point them at the AI Edge Gallery app as the easiest thing to try at home.</p></aside>
+</section>
+
+</main>
+<footer><span id="slide-label">Title</span><span id="counter" aria-live="polite">01 / 37</span></footer>
+<script src="demo/map-data.js"></script><script src="assets/vendor/qrcode.min.js"></script><script src="qr.js?v=ws-2"></script><script src="handmade.js?v=ws-2"></script><script src="map.js?v=ws-2"></script><script src="slides.js?v=ws-1"></script><script>fromHash()</script>
+</body></html>
