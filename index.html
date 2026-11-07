@@ -120,6 +120,16 @@
 </aside>
 </section>
 
+<section class="slide" aria-label="The 30 sentences">
+<div class="kicker">Now with the real model</div><h2>Our 30 test sentences</h2>
+<p class="lede wide">Six sentences each about five topics. The model only ever sees the text: the topics and colours are ours, added afterwards to check its work.</p>
+<div class="topics"><div class="box topic"><div class="topic-head"><i style="background:#f6c344"></i>Food</div><ul><li>Appam with vegetable stew for breakfast</li><li>Puttu and kadala curry</li><li>Malabar chicken biryani</li><li>A strong filter coffee in the morning</li><li>Karimeen pollichathu wrapped in banana leaf</li><li>Where can I get a good sadya on Onam?</li></ul></div><div class="box topic"><div class="topic-head"><i style="background:#7fcf98"></i>Places</div><ul><li>Houseboat cruise on the Alleppey backwaters</li><li>Tea gardens of Munnar in the mist</li><li>Chinese fishing nets at Fort Kochi</li><li>Sunset at Varkala cliff</li><li>Wildlife safari in Thekkady</li><li>Weekend trip from Kochi to the hills</li></ul></div><div class="box topic"><div class="topic-head"><i style="background:#6ea0ff"></i>Tech</div><ul><li>Restart the crashed Kubernetes pod</li><li>Python script throws a KeyError</li><li>Deploying a container to Cloud Run</li><li>The GPU ran out of memory during training</li><li>Write a Go function to parse JSON</li><li>Our API latency spiked after the release</li></ul></div><div class="box topic"><div class="topic-head"><i style="background:#b49cff"></i>Weather</div><ul><li>Heavy monsoon rain expected in Ernakulam</li><li>Orange alert issued for coastal districts</li><li>മഴ ശക്തമായി പെയ്യുന്നു<small>“it’s raining heavily”</small></li><li>Carry an umbrella, it is pouring</li><li>Humid and cloudy afternoon</li><li>Waterlogging on MG Road after the downpour</li></ul></div><div class="box topic"><div class="topic-head"><i style="background:#f28b82"></i>Sports</div><ul><li>India won the test match by an innings</li><li>Kerala Blasters scored in the final minute</li><li>Sanju Samson hits a century</li><li>Snake boat race at Punnamada lake</li><li>Football fans packed the Kaloor stadium</li><li>Practising cover drives at the nets</li></ul></div></div>
+<aside class="notes">
+<h4>Say</h4><p>Before we put them on the map, read a few out loud. Notice the traps: “My container keeps crashing” isn’t in this list, but we’ll search for it. The snake boat race is both a sport and a place. One weather sentence is in Malayalam.</p>
+<h4>Understand it</h4><ul><li>Each of these 30 sentences becomes one 768-number embedding, exactly like the dishes became 3-number lists.</li><li>The colours are only for us. If the map groups them by colour anyway, the model has understood the topics on its own.</li><li>The sentences live in <span class="mono">demo/sentences.py</span>; change them and re-run <span class="mono">demo/build_map.py</span> for a real map.</li></ul>
+</aside>
+</section>
+
 <section class="slide map-slide" aria-label="Embedding map">
 <div class="map-layout">
   <div class="map-side">
@@ -132,8 +142,8 @@
   <svg id="embed-map" role="img" aria-label="Sentences plotted in a 2-D projection of embedding space"></svg>
 </div>
 <aside class="notes">
-<h4>How this slide works</h4><p>→ advances through 8 steps <b>on this slide</b> before moving on. The remote shows “Step x of 8”.</p>
-<ol><li>One sentence appears.</li><li>Food sentences join it: they cluster.</li><li>All 30 with topic labels.</li><li>Query “Where should I eat breakfast?” drops in; a ring reaches its 3 nearest.</li><li>A Malayalam query lands among English weather sentences.</li><li>“My container keeps crashing” finds the Kubernetes sentence with no shared words.</li><li>Snake boat race sits between Sports and Places.</li><li>Caveat: this is a 2-D shadow of 768-D.</li></ol>
+<h4>How this slide works</h4><p>→ advances through 12 steps <b>on this slide</b> before moving on. The remote shows “Step x of 12”.</p>
+<ol><li>One sentence appears.</li><li>Food sentences join it, with their text: they cluster.</li><li>+ Places (labelled).</li><li>+ Tech (labelled), far from both.</li><li>+ Weather (labelled), including the Malayalam one.</li><li>+ Sports (labelled): all 30 are now on the map.</li><li>All 30 with topic names: five neighbourhoods.</li><li>Query “Where should I eat breakfast?” drops in; a ring reaches its 3 nearest.</li><li>A Malayalam query lands among the English weather sentences.</li><li>“My container keeps crashing” finds the Kubernetes sentence with no shared words.</li><li>Snake boat race sits between Sports and Places.</li><li>Caveat: this is a 2-D shadow of 768-D.</li></ol>
 <h4>Understand it</h4><p>To draw 768-D on a screen we use <b>PCA</b> (principal component analysis): it finds the two directions along which the points spread out most and flattens everything onto them. Like a shadow of a 3-D object on a wall, it keeps the overall shape but distorts some distances.</p>
 <h4>Before the event</h4><p>Run <span class="mono">cd demo &amp;&amp; python build_map.py</span> so the map shows real model positions and real scores. Then check each step’s story still matches the picture, and edit <span class="mono">STEPS</span> in <span class="mono">map.js</span> if needed.</p>
 <div class="q"><b>Q: Are the colours from the model?</b>No. We coloured them by the topic we wrote them for. The model never saw the colours, yet the positions still group by topic. That’s the point.</div>

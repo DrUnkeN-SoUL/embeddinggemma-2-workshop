@@ -38,7 +38,11 @@
   const boat = idx('Snake boat race at Punnamada lake');
   const STEPS = [
     { show: [first], focus: first, say: 'Every sentence becomes 768 numbers. We can’t draw 768 dimensions, so this map squashes them down to 2. Here is our first sentence.' },
-    { show: 'food', say: 'Now add more food sentences. They land close together, and nobody told the model they were about food.' },
+    { reveal: ['food'], say: 'Now add the other food sentences. They land close together, and nobody told the model they were about food.' },
+    { reveal: ['food', 'places'], say: 'Add six sentences about Kerala places: backwaters, Munnar, Fort Kochi. They form their own neighbourhood, away from the food.' },
+    { reveal: ['food', 'places', 'tech'], say: 'Six tech sentences land far from both. Kubernetes, Python errors and GPUs have nothing in common with appam.' },
+    { reveal: ['food', 'places', 'tech', 'weather'], say: 'Weather and monsoon sentences group together, including the Malayalam one: “മഴ ശക്തമായി പെയ്യുന്നു” means “it’s raining heavily”.' },
+    { reveal: ['food', 'places', 'tech', 'weather', 'sports'], say: 'Finally, six sports sentences: cricket, football, a snake boat race. That’s all 30.' },
     { show: 'all', groups: true, say: 'All 30 sentences. Five topics form five neighbourhoods. That’s the whole idea: <b>similar meaning, nearby point</b>.' },
     { show: 'all', query: 0, say: 'Search drops the query onto the same map and takes the closest points. The results are all food, and most don’t contain the word “breakfast” at all.' },
     { show: 'all', query: 1, say: 'This query is in Malayalam: “Will it rain in Kochi today?” It still lands in the weather neighbourhood, next to the English sentences.' },
@@ -54,6 +58,8 @@
   const ring = el('circle', { class: 'ring', fill: 'none', stroke: '#ffffff', 'stroke-opacity': .35, 'stroke-dasharray': '4 6', 'stroke-width': 1.5, opacity: 0, r: 0 }, gRing);
   const links = [0, 1, 2].map(() => el('line', { class: 'link', stroke: '#ffffff', 'stroke-opacity': .5, 'stroke-width': 1.5, opacity: 0 }, gLinks));
   const dots = pts.map(p => el('circle', { class: 'pt', cx: W / 2, cy: H / 2, r: 7, fill: COLORS[p.g], opacity: 0 }, gPts));
+  // Leader lines connect each dot to its label when a topic's labels are stacked in a column.
+  const leaders = pts.map(() => el('line', { class: 'lbl', stroke: '#ffffff', 'stroke-opacity': .28, 'stroke-width': 1, opacity: 0 }, gLbl));
   const labels = pts.map(p => { const t = el('text', { class: 'lbl', 'font-size': 17, fill: '#e8eaed', opacity: 0, 'paint-order': 'stroke', stroke: '#080b10', 'stroke-width': 6, 'stroke-linejoin': 'round' }, gLbl); t.textContent = p.t; return t; });
   const groupLabels = Object.keys(NAMES).map(g => {
     const m = pts.filter(p => p.g === g), cx = m.reduce((s, p) => s + X(p.pos[0]), 0) / m.length, top = Math.min(...m.map(p => Y(p.pos[1])));
@@ -73,7 +79,9 @@
   let step = 0;
   function render() {
     const s = STEPS[step];
-    const visible = i => s.show === 'all' || (s.show === 'food' ? pts[i].g === 'food' : s.show.includes(i));
+    // reveal: topics shown so far; the newest topic gets its sentence labels so every sentence is read on the map.
+    const newest = s.reveal ? s.reveal[s.reveal.length - 1] : null;
+    const visible = i => s.show === 'all' || (s.reveal ? s.reveal.includes(pts[i].g) : s.show.includes(i));
     const q = s.query != null ? qs[s.query] : null;
     const spotlight = q || (s.focus != null && s.show === 'all');
     const hub = q ? q.pos : spotlight ? pts[s.focus].pos : null;
@@ -81,12 +89,28 @@
     const lit = new Set(near.map(([j]) => j)); if (s.focus != null) lit.add(s.focus);
     dots.forEach((d, i) => {
       d.setAttribute('cx', visible(i) ? X(pts[i].pos[0]) : W / 2); d.setAttribute('cy', visible(i) ? Y(pts[i].pos[1]) : H / 2);
-      d.setAttribute('opacity', !visible(i) ? 0 : spotlight && !lit.has(i) ? .16 : 1);
+      d.setAttribute('opacity', !visible(i) ? 0 : spotlight && !lit.has(i) ? .16 : newest && pts[i].g !== newest ? .45 : 1);
       d.setAttribute('r', i === s.focus ? 10 : spotlight && lit.has(i) ? 8.5 : 7);
     });
+    // Stacked layout for the newest topic: labels in an evenly spaced column beside the cluster, so none overlap.
+    const stack = new Map();
+    if (newest) {
+      const members = pts.map((p, i) => i).filter(i => pts[i].g === newest).sort((a, b) => Y(pts[a].pos[1]) - Y(pts[b].pos[1]));
+      const xs = members.map(i => X(pts[i].pos[0])), cy = members.reduce((t, i) => t + Y(pts[i].pos[1]), 0) / members.length;
+      const right = (Math.min(...xs) + Math.max(...xs)) / 2 < W * .55, gap = 27;
+      const colX = right ? Math.max(...xs) + 44 : Math.min(...xs) - 44;
+      const top = Math.min(Math.max(cy - (members.length - 1) * gap / 2, 30), H - 30 - (members.length - 1) * gap);
+      members.forEach((i, k) => stack.set(i, { x: colX, y: top + k * gap, anchor: right ? 'start' : 'end' }));
+    }
     labels.forEach((t, i) => {
-      const show = visible(i) && (s.show === 'food' || i === s.focus);
-      placeLabel(t, X(pts[i].pos[0]), Y(pts[i].pos[1])); t.setAttribute('opacity', show ? 1 : 0);
+      const show = visible(i) && ((newest && pts[i].g === newest) || i === s.focus);
+      const st = stack.get(i), dx = X(pts[i].pos[0]), dy = Y(pts[i].pos[1]);
+      if (st) {
+        t.setAttribute('x', st.x); t.setAttribute('y', st.y + 6); t.setAttribute('text-anchor', st.anchor);
+        const l = leaders[i]; l.setAttribute('x1', dx); l.setAttribute('y1', dy); l.setAttribute('x2', st.x + (st.anchor === 'start' ? -6 : 6)); l.setAttribute('y2', st.y);
+      } else placeLabel(t, dx, dy);
+      leaders[i].setAttribute('opacity', show && st ? 1 : 0);
+      t.setAttribute('opacity', show ? 1 : 0);
     });
     groupLabels.forEach(t => t.setAttribute('opacity', s.groups ? 1 : 0));
     badges.forEach((b, k) => {
