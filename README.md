@@ -15,7 +15,7 @@ It prints three URLs:
 - **Remote (this laptop)**: opened on `127.0.0.1` rather than `localhost` on purpose, because browsers share zoom per host and this keeps the projector and speaker page sizes independent. Big ←/→ buttons, a jump-to-slide menu, Blank, an elapsed-time timer, the speaker notes and (on wide screens) a live preview of the projector.
 - **Remote (phone)**: the same page over Wi-Fi. Under WSL2 the printed LAN address is the WSL VM's, which phones can't reach; use the laptop URL, or enable WSL mirrored networking / a Windows port proxy.
 
-Only connections carrying the key can control the slides. Opening `index.html` directly (file://) still works with the keyboard, just without the remote.
+Only connections carrying the key can control the slides. The projector and speaker page share navigation only; each has its own zoom (Ctrl + scroll / Ctrl + `+` `-` `0`, or A− / A+ on the speaker page). You can open the display in several tabs or browsers: one tab leads, a newly opened tab jumps to the current slide, and pressing arrow keys on any projector tab makes it the leader. After updating the code, reload every open deck tab. Opening `index.html` directly (file://) still works with the keyboard, just without the remote.
 
 Keyboard on the display: ←/→ / Space / PageUp/PageDown, Home/End, F fullscreen, B blank, Ctrl + scroll or Ctrl + `+`/`-`/`0` to resize the slides only (remembered per screen).
 

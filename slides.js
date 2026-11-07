@@ -60,7 +60,7 @@ if (!PREVIEW) {
     if (!(e.ctrlKey || e.metaKey)) return;
     if (e.key === '=' || e.key === '+') { e.preventDefault(); setZoom(deckZoom + 0.1); }
     else if (e.key === '-' || e.key === '_') { e.preventDefault(); setZoom(deckZoom - 0.1); }
-    else if (e.key === '0') { e.preventDefault(); setZoom(1); }
+    else if (e.key === '0') setZoom(1); // not prevented: the browser also resets any leftover browser zoom
   }, { capture: true });
   addEventListener('wheel', e => {
     if (!e.ctrlKey) return;
@@ -79,7 +79,8 @@ function state() {
     outline: slides.map(x => x.getAttribute('aria-label')),
   };
 }
-function report() { if (!PREVIEW && socket && socket.readyState === 1) socket.send(JSON.stringify(state())); }
+let mirroring = false; // true while copying another tab's state, so we don't echo it back
+function report() { if (!PREVIEW && !mirroring && socket && socket.readyState === 1) socket.send(JSON.stringify(state())); }
 // Preview: jump to the display's slide, then walk the in-slide steps to match.
 function mirror(m) {
   if (current !== m.slide - 1) show(m.slide - 1, m.slide - 1 < current ? -1 : 1);
@@ -91,14 +92,18 @@ function mirror(m) {
   }
   document.body.classList.toggle('blank', !!m.blank);
 }
+const seen = new Set(); // command ids already handled, so a duplicate delivery can't move twice
 function connect() {
   if (!location.protocol.startsWith('http')) return;
+  if (socket && socket.readyState <= 1) return; // already connecting or open
   const role = PREVIEW ? `preview&key=${encodeURIComponent(params.get('key') || '')}` : 'display';
   socket = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws?role=${role}`);
-  socket.onopen = report;
+  socket.onopen = () => { if (!PREVIEW) socket.send(JSON.stringify({ ...state(), boot: true })); };
   socket.onmessage = e => {
     let m; try { m = JSON.parse(e.data); } catch { return; }
     if (PREVIEW) { if (m.type === 'state') mirror(m); return; }
+    if (m.type === 'state') { mirroring = true; try { mirror(m); } finally { mirroring = false; } return; } // another projector tab moved
+    if (m.id) { if (seen.has(m.id)) return; seen.add(m.id); }
     if (m.type === 'nav') move(m.dir > 0 ? 1 : -1);
     else if (m.type === 'goto') show(m.slide - 1, m.slide - 1 < current ? -1 : 1);
     else if (m.type === 'blank') blank(m.on);

@@ -33,7 +33,12 @@ const server = http.createServer((req, res) => {
 
 // ---------- minimal WebSocket (RFC 6455, text frames only) ----------
 const displays = new Set(), remotes = new Set(), previews = new Set();
+const alive = new WeakMap(); // socket -> answered the last ping
 let lastState = null;
+// One projector tab is the leader: it alone receives remote commands, and every other tab mirrors its state.
+// Pressing keys on any projector tab makes it the leader. A newly opened tab joins on the current slide.
+let leader = null;
+const pickLeader = () => { leader = [...displays].pop() || null; };
 
 function sendFrame(sock, text) {
   const data = Buffer.from(text);
@@ -49,11 +54,16 @@ function control(sock, opcode, payload = Buffer.alloc(0)) {
 function onMessage(sock, role, text) {
   let m; try { m = JSON.parse(text); } catch { return; }
   if (role === 'display' && m.type === 'state') {
+    // A tab that just opened reports its own slide; if a session is already running, bring it in line instead.
+    if (m.boot && lastState && leader && leader !== sock) { sendFrame(sock, lastState); return; }
+    leader = sock;
     lastState = text;
     remotes.forEach(r => sendFrame(r, text));
     previews.forEach(r => sendFrame(r, text));
+    displays.forEach(d => { if (d !== sock) sendFrame(d, text); });
   } else if (role === 'remote' && ['nav', 'goto', 'blank'].includes(m.type)) {
-    displays.forEach(d => sendFrame(d, JSON.stringify(m)));
+    if (!leader || !displays.has(leader)) pickLeader();
+    if (leader) sendFrame(leader, JSON.stringify(m));
   }
 }
 
@@ -68,12 +78,11 @@ server.on('upgrade', (req, sock) => {
   const accept = crypto.createHash('sha1').update(wsKey + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64');
   sock.write(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`);
   sock.setNoDelay(true);
+  alive.set(sock, true);
   const group = role === 'display' ? displays : role === 'remote' ? remotes : previews;
   group.add(sock);
   if (role !== 'display' && lastState) sendFrame(sock, lastState);
-  if (role === 'remote') {
-    displays.forEach(d => sendFrame(d, JSON.stringify({ type: 'hello' })));
-  }
+  if (role === 'remote' && !lastState && leader) sendFrame(leader, JSON.stringify({ type: 'hello' }));
   console.log(`+ ${role} connected (${displays.size} display, ${remotes.size} remote)`);
 
   let buf = Buffer.alloc(0), fragments = [];
@@ -92,15 +101,25 @@ server.on('upgrade', (req, sock) => {
       buf = buf.subarray(off + len);
       if (opcode === 0x8) { control(sock, 0x8); sock.end(); return; }
       if (opcode === 0x9) { control(sock, 0xA, payload); continue; }
+      if (opcode === 0xA) { alive.set(sock, true); continue; }
       if (opcode === 0x1 || opcode === 0x0) {
         fragments.push(payload);
         if (fin) { onMessage(sock, role, Buffer.concat(fragments).toString('utf8')); fragments = []; }
       }
     }
   });
-  const drop = () => { if (group.delete(sock)) console.log(`- ${role} left (${displays.size} display, ${remotes.size} remote)`); };
+  const drop = () => { const was = group.delete(sock); if (sock === leader) pickLeader(); if (was) console.log(`- ${role} left (${displays.size} display, ${remotes.size} remote)`); };
   sock.on('close', drop); sock.on('error', drop);
 });
+
+// Heartbeat: ping every 10 s; connections that didn't answer the previous ping are dropped.
+// Closed laptop lids, sleeping phones and killed tabs otherwise linger as ghost connections.
+setInterval(() => {
+  for (const group of [displays, remotes, previews]) for (const sock of group) {
+    if (!alive.get(sock)) { sock.destroy(); group.delete(sock); if (sock === leader) pickLeader(); continue; }
+    alive.set(sock, false); control(sock, 0x9);
+  }
+}, 10000).unref();
 
 server.listen(PORT, '0.0.0.0', () => {
   const lan = Object.values(os.networkInterfaces()).flat().filter(i => i && i.family === 'IPv4' && !i.internal).map(i => i.address);

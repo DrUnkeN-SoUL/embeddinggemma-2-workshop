@@ -39,11 +39,14 @@ select{flex:1;min-width:0}
 .preview{display:none;margin-top:14px;aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#000;position:relative}
 .preview iframe{position:absolute;left:0;top:0;width:1600px;height:900px;border:0;transform-origin:0 0;pointer-events:none}
 .err{padding:12px 18px;background:#3a1a1a;color:#ffd7d3;display:none}
+/* Speaker-page text size: applied to its own panels only, never to the preview or the projector. */
+.top,.notes,.controls,.now>:not(.preview){zoom:var(--rz,1)}
+#rz-label{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13.5px;min-width:3.2em;text-align:center}
 @media(min-width:900px){.preview{display:block}body{grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr auto}.top{grid-column:1/-1}.now{grid-column:1;grid-row:2}.notes{grid-column:2;grid-row:2/4;padding-top:16px}.controls{grid-column:1;grid-row:3}}
 </style>
 </head>
 <body>
-<div class="top"><span class="status" id="status" title="Connection"></span><span class="timer" id="timer">00:00</span><button id="t-toggle">Start</button><button id="t-reset">Reset</button></div>
+<div class="top"><span class="status" id="status" title="Connection"></span><span class="timer" id="timer">00:00</span><button id="t-toggle">Start</button><button id="t-reset">Reset</button><button id="rz-down" aria-label="Smaller text">A−</button><span id="rz-label">100%</span><button id="rz-up" aria-label="Larger text">A+</button></div>
 <div class="err" id="err"></div>
 <section class="now"><div class="pos" id="pos">Waiting for the deck…</div><h1 id="label">Open the display page on the projector</h1><span class="step" id="step" hidden></span><div class="next" id="next"></div><div class="preview" id="preview-wrap"><iframe id="preview" title="What the audience sees" tabindex="-1"></iframe></div></section>
 <section class="notes" id="notes"><p class="empty">Speaker notes appear here.</p></section>
@@ -57,7 +60,7 @@ const key = new URLSearchParams(location.search).get('key') || '';
 const $ = id => document.getElementById(id);
 let ws, state = null;
 
-function send(m) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); }
+function send(m) { m.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7); if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); }
 function connect() {
   ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws?role=remote&key=${encodeURIComponent(key)}`);
   ws.onopen = () => { $('status').classList.add('on'); $('err').style.display = 'none'; };
@@ -107,6 +110,27 @@ const wrap = $('preview-wrap'), frame = $('preview');
 function fit() { frame.style.transform = `scale(${wrap.clientWidth / 1600})`; }
 if (matchMedia('(min-width:900px)').matches && key) { frame.src = `/?preview&key=${encodeURIComponent(key)}`; }
 addEventListener('resize', fit); new ResizeObserver(fit).observe(wrap); fit();
+// Text size for this page only. Ctrl/⌘ + '+' '-' '0' and Ctrl + scroll are handled here instead of by the
+// browser, so resizing the speaker notes can never affect the slides. Only navigation is shared.
+let rz = 1;
+try { rz = Number(localStorage.getItem('remote-zoom')) || 1; } catch {}
+function setRz(z) {
+  rz = Math.min(2.5, Math.max(0.6, Math.round(z * 100) / 100));
+  document.documentElement.style.setProperty('--rz', rz);
+  $('rz-label').textContent = `${Math.round(rz * 100)}%`;
+  try { localStorage.setItem('remote-zoom', rz); } catch {}
+  fit();
+}
+$('rz-up').onclick = () => setRz(rz + 0.1);
+$('rz-down').onclick = () => setRz(rz - 0.1);
+addEventListener('keydown', e => {
+  if (!(e.ctrlKey || e.metaKey)) return;
+  if (e.key === '=' || e.key === '+') { e.preventDefault(); setRz(rz + 0.1); }
+  else if (e.key === '-' || e.key === '_') { e.preventDefault(); setRz(rz - 0.1); }
+  else if (e.key === '0') setRz(1); // not prevented: the browser also resets any leftover browser zoom
+}, { capture: true });
+addEventListener('wheel', e => { if (e.ctrlKey) { e.preventDefault(); setRz(rz * (e.deltaY < 0 ? 1.05 : 1 / 1.05)); } }, { passive: false });
+setRz(rz);
 connect();
 </script>
 </body>
