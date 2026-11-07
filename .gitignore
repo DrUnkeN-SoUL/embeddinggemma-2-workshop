@@ -8,3 +8,9 @@ demo/.venv/
 demo/models/
 *.litertlm
 demo/serve.log
+
+# Intent-matcher demo: downloaded Banking77 data + embedding cache
+apps/intent-matcher/data/
+
+# Typed-assistant demo: embedding cache
+apps/typed-assistant/data/

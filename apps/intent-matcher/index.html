@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Intent Matcher</title>
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#05070a; --surface:#10141a; --surface-2:#161b23; --surface-hi:#1b2433;
+  --ink:#f1f3f5; --muted:#a3a9b3; --faint:#6d7480;
+  --blue:#6ea0ff; --blue-strong:#3f7ff0; --green:#7fcf98; --yellow:#f6c344;
+  --radius:12px;
+  --sans:"Google Sans",Arial,Helvetica,"Nirmala UI","Noto Sans Malayalam",Kartika,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans)}
+body{min-height:100dvh;padding:28px clamp(16px,4vw,64px) 24px;display:flex;flex-direction:column;gap:24px}
+h1,h2,p{margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+h1{font-size:clamp(30px,3vw,46px);font-weight:500;letter-spacing:-.025em;line-height:1.1}
+.sub{color:var(--muted);font-size:clamp(15px,1.1vw,18px);margin-top:8px}
+.status{display:inline-flex;align-items:center;gap:10px;background:var(--surface);border-radius:999px;padding:9px 16px;font-size:15px;color:var(--muted);white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--green)}
+.status.busy .dot{background:var(--yellow)}
+.status.err .dot{background:#f28b82}
+
+main{flex:1;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);grid-template-areas:"input results" "examples results";grid-template-rows:auto 1fr;column-gap:clamp(20px,3vw,48px);row-gap:18px;align-items:start}
+.left{grid-area:input;display:flex;flex-direction:column;gap:18px;min-width:0}
+.examples-wrap{grid-area:examples;min-width:0}
+label.lbl{font-size:16px;color:var(--muted)}
+textarea{width:100%;min-height:150px;resize:vertical;background:var(--surface);color:var(--ink);border:0;border-radius:var(--radius);padding:20px 22px;font:inherit;font-size:clamp(22px,2vw,32px);line-height:1.35}
+textarea::placeholder{color:var(--faint)}
+textarea:focus-visible{outline:2px solid var(--blue);outline-offset:0}
+.hint{font-size:14px;color:var(--faint)}
+.hint kbd{font-family:var(--mono);font-size:12.5px;background:var(--surface-2);color:var(--muted);border-radius:6px;padding:2px 6px}
+.examples{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ex{background:var(--surface);border:0;border-radius:var(--radius);padding:12px 14px;text-align:left;cursor:pointer;font-size:clamp(15px,1.1vw,18px);line-height:1.35;display:flex;gap:10px;align-items:baseline}
+.ex:hover{background:var(--surface-hi)}
+.ex .n{font-family:var(--mono);font-size:12px;color:var(--faint);flex:none}
+.ex small{display:block;color:var(--muted);font-size:13px;margin-top:3px}
+
+.right{grid-area:results;display:flex;flex-direction:column;gap:14px;min-width:0}
+.verdict{background:var(--surface);border-radius:var(--radius);padding:20px 24px;min-height:128px;display:flex;flex-direction:column;justify-content:center;gap:6px}
+.verdict .k{font-size:15px;color:var(--muted)}
+.verdict .v{font-size:clamp(26px,2.4vw,38px);font-weight:500;letter-spacing:-.02em;line-height:1.15;overflow-wrap:anywhere}
+.verdict.ok .v{color:var(--blue)}
+.verdict.unsure .v{color:var(--yellow)}
+.verdict .why{font-size:15px;color:var(--muted);line-height:1.4}
+.verdict .why b{color:var(--ink);font-weight:500}
+
+.rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 72px;grid-template-rows:auto 8px;column-gap:16px;row-gap:8px;background:var(--surface);border-radius:var(--radius);padding:12px 18px}
+.row .name{grid-column:1;grid-row:1;font-size:clamp(17px,1.35vw,22px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .score{grid-column:2;grid-row:1/3;font-family:var(--mono);font-size:17px;text-align:right;color:var(--muted);align-self:center;font-variant-numeric:tabular-nums}
+.row .bar{grid-column:1;grid-row:2;background:var(--surface-hi);border-radius:4px;overflow:hidden}
+.row .bar i{display:block;height:100%;width:0;background:#3a4a66;border-radius:4px;transition:width .18s ease}
+.row.top{background:var(--surface-hi)}
+.row.top .bar{background:#0d1420}
+.row.top.ok .bar i{background:var(--blue)}
+.row.top.unsure .bar i{background:var(--yellow)}
+.row.top .score{color:var(--ink)}
+.row.empty{color:var(--faint)}
+
+.meta{display:flex;flex-wrap:wrap;gap:8px 22px;font-size:15px;color:var(--muted);align-items:baseline}
+.meta .ms{font-family:var(--mono);font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums}
+.train{font-size:14.5px;color:var(--faint);line-height:1.5}
+.train q{color:var(--muted)}
+footer{font-size:13px;color:var(--faint);line-height:1.5}
+
+@media (max-width:900px){
+  body{padding-top:18px;gap:18px}
+  main{grid-template-columns:minmax(0,1fr);grid-template-areas:"input" "results" "examples";grid-template-rows:auto}
+  .examples{grid-template-columns:minmax(0,1fr)}
+  textarea{min-height:110px}
+  .status{white-space:normal}
+}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Which intent did they mean?</h1>
+    <p class="sub">EmbeddingGemma 2 · 270M · LiteRT-LM · 77 Banking77 support intents</p>
+  </div>
+  <div class="status" id="status" role="status"><span class="dot"></span><span id="statusText">running locally on CPU · offline</span></div>
+</header>
+
+<main>
+  <section class="left" aria-label="Message">
+    <label class="lbl" for="q">Customer message</label>
+    <textarea id="q" rows="3" placeholder="Type like a customer would… e.g. my card still hasn't shown up" autofocus spellcheck="false"></textarea>
+    <p class="hint">Results update as you type. <kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>8</kbd> try an example · <kbd>Esc</kbd> clear · <kbd>/</kbd> focus box</p>
+  </section>
+
+  <section class="examples-wrap" aria-label="Example messages">
+    <div class="examples" id="examples"></div>
+  </section>
+
+  <section class="right" aria-label="Matches" aria-live="polite">
+    <div class="verdict" id="verdict"><span class="k">Matched intent</span><span class="v" style="color:var(--faint)">Waiting for a message</span></div>
+    <ol class="rows" id="rows"></ol>
+    <div class="meta"><span><span class="ms" id="ms">–</span> ms to embed</span><span id="info"></span></div>
+    <p class="train" id="train"></p>
+  </section>
+</main>
+
+<footer id="foot">One embedding per message, compared with 77 intent prototypes (intent name + 10 real example messages each). Nothing leaves this laptop.</footer>
+
+<script>
+const EXAMPLES = [
+  ["bro where's my card, ordered it like 2 weeks ago"],
+  ["atm ate my card lol"],
+  ["got charged 2x for the same coffee??"],
+  ["sent money to my mom yesterday n she still hasnt got it"],
+  ["എന്റെ കാർഡ് ഇതുവരെ വന്നില്ല", "Malayalam: my card hasn't arrived yet"],
+  ["ഒരേ സാധനത്തിന് രണ്ടുതവണ പണം പിടിച്ചു", "Malayalam: I was charged twice for the same item"],
+  ["card"],
+  ["what's the weather in Kochi"],
+];
+const $ = id => document.getElementById(id);
+const box = $("q"), rows = $("rows"), verdict = $("verdict"), status = $("status"), statusText = $("statusText");
+let timer = 0, ctrl = null, seq = 0;
+
+EXAMPLES.forEach(([text, gloss], i) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "ex";
+  b.innerHTML = `<span class="n">${i + 1}</span><span><span class="t"></span>${gloss ? "<small></small>" : ""}</span>`;
+  b.querySelector(".t").textContent = text;
+  if (gloss) { b.querySelector("small").textContent = gloss; b.lang = "ml"; b.querySelector("small").lang = "en"; }
+  b.setAttribute("aria-label", `Example ${i + 1}: ${text}${gloss ? " (" + gloss + ")" : ""}`);
+  b.addEventListener("click", () => setQuery(text));
+  $("examples").appendChild(b);
+});
+
+function setQuery(text) { box.value = text; box.focus(); schedule(0); }
+
+function renderEmpty() {
+  rows.innerHTML = "";
+  for (let i = 0; i < 5; i++) rows.insertAdjacentHTML("beforeend", `<li class="row empty"><span class="name">&nbsp;</span><span class="score"></span><span class="bar"><i></i></span></li>`);
+  verdict.className = "verdict";
+  verdict.innerHTML = `<span class="k">Matched intent</span><span class="v" style="color:var(--faint)">Waiting for a message</span>`;
+  $("ms").textContent = "–"; $("train").textContent = "";
+}
+
+const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const width = s => Math.max(2, Math.min(100, (s - 0.5) / 0.5 * 100));  // bar spans scores 0.5 to 1.0
+
+function render(d) {
+  const ok = d.status === "confident", cls = ok ? "ok" : "unsure";
+  const [a, b] = d.results;
+  verdict.className = "verdict " + cls;
+  verdict.innerHTML = ok
+    ? `<span class="k">Matched intent</span><span class="v">${esc(a.name)}</span><span class="why">score ${a.score.toFixed(3)}, ${(a.score - b.score).toFixed(3)} ahead of #2</span>`
+    : `<span class="k">Unsure, ask a clarifying question</span><span class="v">Did you mean “${esc(a.name)}” or “${esc(b.name)}”?</span><span class="why">${esc(d.reason)}</span>`;
+  rows.innerHTML = d.results.map((r, i) =>
+    `<li class="row ${i === 0 ? "top " + cls : ""}"><span class="name">${esc(r.name)}</span><span class="score">${r.score.toFixed(3)}</span><span class="bar"><i style="width:${width(r.score)}%"></i></span></li>`).join("");
+  $("ms").textContent = d.cached ? d.embed_ms.toFixed(1) : Math.round(d.embed_ms);
+  $("info").textContent = d.cached ? "cached (seen this exact text)" : "on this CPU";
+  $("train").innerHTML = ok ? `Training examples for this intent: ${d.examples.map(e => `<q>${esc(e)}</q>`).join(" · ")}` : "";
+}
+
+function schedule(delay = 150) {
+  clearTimeout(timer);
+  timer = setTimeout(run, delay);
+}
+
+async function run() {
+  const text = box.value.trim();
+  if (ctrl) ctrl.abort();
+  if (!text) { renderEmpty(); setStatus(""); return; }
+  ctrl = new AbortController();
+  const my = ++seq;
+  setStatus("busy");
+  try {
+    const r = await fetch("/api/match?q=" + encodeURIComponent(text), {signal: ctrl.signal});
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const d = await r.json();
+    if (my !== seq) return;  // a newer request was issued
+    render(d); setStatus("");
+  } catch (e) {
+    if (e.name === "AbortError") return;
+    setStatus("err", "local model server not reachable");
+  }
+}
+
+function setStatus(kind, msg) {
+  status.className = "status " + kind;
+  statusText.textContent = msg || (kind === "busy" ? "embedding on CPU…" : "running locally on CPU · offline");
+}
+
+box.addEventListener("input", () => schedule());
+document.addEventListener("keydown", e => {
+  if (e.altKey && /^[1-8]$/.test(e.key)) { e.preventDefault(); setQuery(EXAMPLES[+e.key - 1][0]); }
+  else if (e.key === "Escape") { box.value = ""; box.focus(); schedule(0); }
+  else if (e.key === "/" && document.activeElement !== box) { e.preventDefault(); box.focus(); }
+});
+
+fetch("/api/info").then(r => r.json()).then(i => {
+  $("foot").textContent = `One ${i.dims}-D embedding per message, compared with ${i.intents} intent prototypes (intent name + ${i.examples_per_intent} real example messages each). Confident when top score ≥ ${i.min_score} and ≥ ${i.min_gap} ahead of #2. Model ${i.model} loaded in ${i.load_s} s. Nothing leaves this laptop.`;
+}).catch(() => {});
+
+renderEmpty();
+const pre = new URLSearchParams(location.search).get("q");
+if (pre) setQuery(pre);
+</script>
+</body>
+</html>

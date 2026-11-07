@@ -78,3 +78,14 @@ Model card https://huggingface.co/google/embeddinggemma-2 · LiteRT build and de
 ## Branding
 
 Official chapter: https://gdg.community.dev/gdg-cochin/. The GDG dark lockup is downloaded unchanged from the chapter site's header; `gdg-lockup-clean.svg` recolours its two outline paths to the slide background. The “Cochin” label is separate and not an official chapter-specific lockup.
+
+## On-device apps (laptop CPU, offline)
+
+Both reuse `demo/.venv` and the 165 MB text-only LiteRT model set up for the laptop demo.
+
+| App | Run | What it shows |
+|---|---|---|
+| `apps/intent-matcher` | `apps/intent-matcher/run.sh` → http://127.0.0.1:8090 | Live routing of customer messages to 77 Banking77 intents (92.6% top-1, ~85 ms), with an "unsure, ask a question" state |
+| `apps/typed-assistant` | `apps/typed-assistant/run.sh` → http://127.0.0.1:8091 | Natural language → a schema-validated typed function call or a clarifying question, never an invalid call (~90 ms) |
+
+Each app's README has the measured numbers, talking points and limits. `--eval` reproduces the numbers.

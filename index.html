@@ -604,6 +604,62 @@ client.embeddings.create(model=<span class="s">"…"</span>, input=<span class="
 </aside>
 </section>
 
+<section class="slide" aria-label="Demo: Intent matching">
+<div class="kicker">Demo 4 · Laptop, CPU only · apps/intent-matcher</div>
+<div class="split">
+  <div><h2>Route every support message, on the device</h2><p class="lede">Type a customer message and watch it land on one of 77 real banking intents as you type. One 165 MB model, about 85 ms per message, no network.</p>
+  <ol class="tasks">
+    <li><b>Slang works:</b> “atm ate my card lol” → card swallowed.</li>
+    <li><b>Malayalam works:</b> “എന്റെ കാർഡ് ഇതുവരെ വന്നില്ല” → card arrival.</li>
+    <li><b>It knows when it’s unsure:</b> just “card” asks “Visa or Mastercard, or card linking?”</li>
+  </ol></div>
+  <div><table class="tbl">
+    <thead><tr><th>Banking77, 500 real test messages</th><th class="num">Top-1</th><th class="num">Top-3</th></tr></thead>
+    <tbody>
+      <tr><td>Intent names only, zero-shot</td><td class="num">91.6%</td><td class="num">98.6%</td></tr>
+      <tr class="hi"><td>Names + 10 examples per intent</td><td class="num">92.6%</td><td class="num">99.2%</td></tr>
+      <tr><td>Confident answers only (87% of messages)</td><td class="num">97.5%</td><td class="num">—</td></tr>
+    </tbody></table>
+  <div class="box" style="margin-top:14px"><div class="label">Run it</div><p class="mono" style="font-size:14px;color:#cfe0ff">apps/intent-matcher/run.sh   →   http://127.0.0.1:8090</p></div></div>
+</div>
+<aside class="notes">
+<h4>Before the event</h4><ul><li>Run <span class="mono">apps/intent-matcher/run.sh</span> once at home: it downloads Banking77 (1.6 MB) and builds the vector cache (about 75 s). After that it starts in about a second and needs no network.</li><li>Open http://127.0.0.1:8090 in its own window. Alt+1…8 loads the example messages, Esc clears, / focuses the box.</li></ul>
+<h4>How it works (say this)</h4><p>Every intent gets a “prototype” vector: the average of 10 real example messages plus its name. A new message is embedded once and compared with all 77 prototypes. Highest score wins. If the top score is low or the runner-up is too close, it asks a clarifying question instead of guessing.</p>
+<h4>Real numbers (measured on this laptop, 7 Nov 2026)</h4><ul><li>Median <b>85 ms</b> per message on the CPU; the server uses about 330 MB of RAM.</li><li>Names only already get <b>91.6%</b>; adding 10 examples per intent gets <b>92.6%</b>. Interesting point for the audience: a single example per intent is <i>worse</i> than the name alone (88.8%).</li><li>The confidence rule (top score ≥ 0.82 and ≥ 0.03 ahead of #2) keeps 87% of messages, and those are <b>97.5%</b> right.</li></ul>
+<h4>Honest caveats</h4><ul><li>Banking77 is a public benchmark the model may have seen in training. Expect lower on your own tickets.</li><li>Banking77 has no “off-topic” class; the 0.82 floor was tuned on a handful of hand-written off-topic messages like “what’s the weather in Kochi”.</li><li>The short Malayalam “പണം രണ്ടുതവണ പിടിച്ചു” comes out unsure (its top guess is still right); the longer phrasing on the example button is confident.</li></ul>
+<div class="q"><b>Q: Why not just use an LLM for this?</b>An LLM would work, but it’s heavier and slower per message. Routing is a nearest-neighbour problem: one 85 ms embedding, then 77 dot products. Adding a new intent is adding a few example sentences, no retraining.</div>
+</aside>
+</section>
+
+<section class="slide" aria-label="Demo: Type-safe assistant">
+<div class="kicker">Demo 5 · Laptop, CPU only · apps/typed-assistant</div>
+<div class="split">
+  <div><h2>Say it, get a typed call, or a question</h2><p class="lede">The embedding model picks the function by meaning. Simple rules fill the arguments, and a validator checks every one against its type. It never runs an invalid call.</p>
+  <ol class="tasks">
+    <li><b>“set the bedroom AC to 22 in cool mode”</b> → <span class="mono">set_ac(room="bedroom", temperature=22, mode="cool")</span></li>
+    <li><b>“set AC to 40”</b> → “Temperature must be between 16 and 30”</li>
+    <li><b>“അമ്മയ്ക്ക് മെസ്സേജ് അയക്കൂ ഞാൻ വൈകും”</b> → <span class="mono">send_message(contact="Amma", …)</span></li>
+  </ol></div>
+  <div>
+<pre class="code"><code><span class="c"># the only things it can do: 8 typed tools</span>
+<span class="k">set_ac</span>(room: <span class="s">"living room"</span> | <span class="s">"bedroom"</span> | …,
+       temperature: int[<span class="n">16</span>..<span class="n">30</span>],
+       mode: <span class="s">"cool"</span> | <span class="s">"dry"</span> | <span class="s">"fan"</span> | <span class="s">"auto"</span> = None)
+<span class="k">order_food</span>(dish: <span class="s">"biryani"</span> | <span class="s">"appam &amp; stew"</span> | …,
+           quantity: int[<span class="n">1</span>..<span class="n">10</span>])
+<span class="k">send_message</span>(contact: <span class="s">"Amma"</span> | <span class="s">"Achan"</span> | …, text: str)</code></pre>
+  <div class="box" style="margin-top:14px"><div class="label">Run it</div><p class="mono" style="font-size:14px;color:#cfe0ff">apps/typed-assistant/run.sh   →   http://127.0.0.1:8091</p><p>About 90 ms per command on the CPU. No LLM involved.</p></div></div>
+</div>
+<aside class="notes">
+<h4>Before the event</h4><ul><li>Run <span class="mono">apps/typed-assistant/run.sh</span> once at home: it embeds 95 texts (about 9 s) and caches them. Then it starts in about 0.3 s, fully offline.</li><li>Open http://127.0.0.1:8091. Enter runs a command; Alt+1…0 load the 10 examples; Alt+T toggles the typed tool list.</li></ul>
+<h4>How it works (say this)</h4><ol><li><b>Pick the function by meaning:</b> each tool has a description plus 7–9 example phrases (English, Manglish, Malayalam) averaged into a prototype vector. The command is embedded once and compared with the 8 prototypes, the same idea as the intent matcher.</li><li><b>Fill the arguments with plain rules:</b> a synonym list for enums (with an embedding fallback: “onam feast” → sadya), regex for numbers, times and durations, keywords for on/off.</li><li><b>Validate every argument</b> against its type, range and allowed values. Anything wrong or missing becomes a clarifying question instead of a call. Follow-ups work: “set AC to 40” → “22” → “living room” runs the call.</li></ol>
+<h4>Why “type-safe” matters</h4><p>The output can only ever be one of 8 known functions with valid arguments, or a question. That’s the property you want before letting AI touch real devices or payments, and it runs in about 90 ms without sending anything off the laptop.</p>
+<h4>Real numbers (67 test utterances, measured on this laptop)</h4><ul><li>Main set (written alongside the tools): 100% tool choice and exact typed calls. That only shows the rules cover what they were written for.</li><li><b>Hard set (14 unseen phrasings): 64% confident and right.</b> Every miss but one safely became “unsure” instead of a wrong call. That’s the honest number for an unprepared audience.</li><li>The one wrong call: “is the back door locked?” ran <span class="mono">lock_door(back, locked=True)</span>, because there is no “check state” tool. Good talking point about schema design.</li></ul>
+<h4>Known limits</h4><ul><li>Romanised Malayalam with no English keywords is weak (“Achanod parayu njan ethi” → unsure). Malayalam script works better.</li><li>One command per message; no dates (“tomorrow” stays in the reminder text). “turn off the AC” isn’t in the schema.</li></ul>
+<div class="q"><b>Q: Why not let an LLM write the JSON?</b>You can, and with a small LLM you’d extract arguments better. But you still need the validator: models can produce out-of-range or made-up values. Here the embedder only chooses between known functions, so the worst case is a question, not a wrong action.</div>
+</aside>
+</section>
+
 <section class="slide" aria-label="Anatomy of an on-device search app">
 <div class="kicker">Putting it together</div><h2>Anatomy of an on-device search app</h2>
 <div class="grid g2">
