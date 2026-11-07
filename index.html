@@ -43,7 +43,7 @@
 <section class="slide lab-slide" aria-label="Setup">
 <div class="kicker">Setup</div>
 <div class="split wide-right setup-split">
-  <div class="qr-box"><div id="colab-qr" data-url=""></div><p class="qr-caption" id="colab-qr-caption"></p></div>
+  <div class="qr-box"><div id="colab-qr" data-url="https://colab.research.google.com/github/DrUnkeN-SoUL/embeddinggemma2-workshop/blob/main/workshop.ipynb"></div><p class="qr-caption" id="colab-qr-caption"></p></div>
   <div><h2>Scan to open the notebook</h2>
   <ol class="tasks">
     <li><b>Scan the code</b> with your phone camera, or open the link on your laptop.</li>
@@ -581,11 +581,12 @@ console.log(embedding.length);</code></pre>
   <div><h2>A local embedding server with an OpenAI-style API</h2><p class="lede"><span class="mono">litert-lm serve</span> exposes <span class="mono">/v1/embeddings</span>, so tools that already speak the OpenAI API can use the local model unchanged.</p>
   <div class="box" style="margin-top:22px"><div class="label">Alternative: Ollama with a community GGUF</div><p class="mono" style="font-size:13.5px;color:#cfe0ff">ollama pull hf.co/&lt;user&gt;/EmbeddingGemma-2-GGUF:Q8_0</p><p>Community builds, not official. Test before relying on them.</p></div></div>
 <pre class="code"><code><span class="c">$ pip install litert-lm==0.18.0</span>
+<span class="c">$ litert-lm import embeddinggemma-2-text-270m.litertlm</span>
 <span class="c">$ litert-lm serve --host 127.0.0.1 --port 9379</span>
 
 <span class="c">$ curl -X POST http://127.0.0.1:9379/v1/embeddings \</span>
 <span class="c">  -H "Content-Type: application/json" \</span>
-<span class="c">  -d '{"model": "embedding-gemma-v2.litertlm,gpu",</span>
+<span class="c">  -d '{"model": "embeddinggemma-2-text-270m.litertlm,cpu",</span>
 <span class="c">       "input": "task: search query | text: hello"}'</span>
 
 <span class="c"># Python, using the OpenAI client:</span>
@@ -595,7 +596,7 @@ client = OpenAI(base_url=<span class="s">"http://127.0.0.1:9379/v1"</span>,
 client.embeddings.create(model=<span class="s">"…"</span>, input=<span class="s">"…"</span>)</code></pre>
 </div>
 <aside class="notes">
-<h4>Before the event</h4><ul><li>Install and run this on your laptop at home and confirm the exact model string. Google’s example uses <span class="mono">embedding-gemma-v2.litertlm,gpu</span>; for a CPU-only demo, check the LiteRT-LM CLI docs for the CPU backend name.</li><li>Pre-download the model so the demo doesn’t depend on Wi-Fi.</li></ul>
+<h4>Before the event</h4><ul><li>Verified on CPU with litert-lm 0.18.0: download <span class="mono">embeddinggemma-2-text-270m.litertlm</span> (text-only, 165 MB) from <span class="mono">litert-community/embeddinggemma-2-text-270m-litert-lm</span>, run <span class="mono">litert-lm import embeddinggemma-2-text-270m.litertlm</span>, then <span class="mono">litert-lm serve --host 127.0.0.1 --port 9379</span>. The <span class="mono">model</span> string is <span class="mono">&lt;model ID&gt;,&lt;backend&gt;</span>: use <span class="mono">embeddinggemma-2-text-270m.litertlm,cpu</span>. Google’s example uses <span class="mono">embedding-gemma-v2.litertlm,gpu</span>; on a laptop without a usable GPU, <span class="mono">gpu</span> falls back to software WebGPU and takes seconds per query.</li><li>Live: <span class="mono">demo/laptop_demo.sh</span> starts the server, indexes 30 sentences and opens a search prompt (about 85 ms per query on a Ryzen 7 laptop CPU). <span class="mono">--query "…"</span> runs one query. Setup is in the README, “Laptop CPU demo”.</li><li>Pre-download the model so the demo doesn’t depend on Wi-Fi.</li></ul>
 <h4>Say</h4><p>Any laptop in this room can be an embedding server. Because the API matches OpenAI’s, LangChain, LlamaIndex and your own scripts can point at <span class="mono">localhost</span> instead of a paid API.</p>
 <h4>Understand it</h4><p>“OpenAI-compatible” just means the request and response JSON look the same as OpenAI’s embeddings endpoint. It’s become an industry convention for local model servers (Ollama and LM Studio do the same).</p>
 </aside>

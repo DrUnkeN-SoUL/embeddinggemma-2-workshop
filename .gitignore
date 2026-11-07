@@ -2,3 +2,9 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 .DS_Store
+
+# Laptop CPU demo (never commit model weights)
+demo/.venv/
+demo/models/
+*.litertlm
+demo/serve.log

@@ -25,7 +25,8 @@ The model is Apache 2.0 and not gated, so no Hugging Face token is needed.
 """)
 md("## Setup")
 code("""
-!pip install -q -U sentence-transformers datasets scikit-learn matplotlib
+# Colab already has datasets, scikit-learn and matplotlib; upgrading only sentence-transformers avoids dependency warnings.
+!pip install -q -U sentence-transformers
 """)
 code("""
 import time, random, numpy as np, torch, matplotlib.pyplot as plt
@@ -44,7 +45,8 @@ model = SentenceTransformer(
     config_kwargs={"vision_config": None, "audio_config": None},  # text-only: 270M parameters
 )
 print("Device:", device, "| dtype:", dtype)
-print("Embedding size:", model.get_sentence_embedding_dimension())
+dim_fn = getattr(model, "get_embedding_dimension", None) or model.get_sentence_embedding_dimension
+print("Embedding size:", dim_fn())
 
 def enc(texts, **kw):
     \"\"\"Encode to normalized numpy vectors (so dot product = cosine similarity).\"\"\"
@@ -174,16 +176,16 @@ md("### 3. Time it: GPU vs CPU, on real Wikipedia paragraphs")
 code("""
 batch = passages[:256]
 
-def per_second(m):
-    m.encode(batch[:8], prompt_name="Document")                     # warm-up
-    t = time.perf_counter(); m.encode(batch, batch_size=32, prompt_name="Document")
-    return len(batch) / (time.perf_counter() - t)
+def per_second(m, n):
+    m.encode(batch[:4], prompt_name="Document")                     # warm-up
+    t = time.perf_counter(); m.encode(batch[:n], batch_size=16, prompt_name="Document")
+    return n / (time.perf_counter() - t)
 
-print(f"{device.upper()}: {per_second(model):.0f} passages/sec")
+print(f"{device.upper()}: {per_second(model, 256):.0f} passages/sec")
 if device == "cuda":
     cpu_model = SentenceTransformer(MODEL_ID, device="cpu", model_kwargs={"torch_dtype": torch.float32},
                                     config_kwargs={"vision_config": None, "audio_config": None})
-    print(f"CPU: {per_second(cpu_model):.1f} passages/sec")
+    print(f"CPU: {per_second(cpu_model, 32):.1f} passages/sec   (Colab's CPU is a small shared VM; the quantized edge build below is much faster)")
     del cpu_model
 """)
 md("### 4. Weigh the encoders\nThe text core is small. Vision adds about 170M parameters.")
@@ -197,14 +199,14 @@ print(f"Text + vision:  {count(vision_model):.0f}M parameters")
 """)
 md("""
 ### Stretch: the quantized edge build with LiteRT-LM
-Runs the same `.litertlm` file that phones use, on Colab's CPU. Follows Google's LiteRT-LM embedding guide (https://developers.google.com/edge/litert-lm/embedding_models); if the API has changed, this cell prints the error and the rest of the notebook still runs.
+Runs the quantized text-only `.litertlm` file (165 MB) that phones use, on Colab's CPU. Follows Google's LiteRT-LM embedding guide (https://developers.google.com/edge/litert-lm/embedding_models); if the API has changed, this cell prints the error and the rest of the notebook still runs.
 """)
 code("""
 try:
     !pip install -q litert-lm
     from huggingface_hub import hf_hub_download
     from litert_lm import Backend, EmbeddingEngine
-    path = hf_hub_download("litert-community/embeddinggemma-2-740m-litert-lm", "embeddinggemma-2-740m.litertlm")
+    path = hf_hub_download("litert-community/embeddinggemma-2-text-270m-litert-lm", "embeddinggemma-2-text-270m.litertlm")
     with EmbeddingEngine(path, backend=Backend.CPU()) as engine:
         engine.compute_embedding("task: search query | text: warm-up")
         t = time.perf_counter()
@@ -245,11 +247,14 @@ for row in qa.select(range(3)):
 # How often does the expected answer appear in the top 3 passages? (skip yes/no answers)
 rows = [r for r in qa if r["answer"].lower() not in ("yes", "no") and len(r["answer"]) > 2][:300]
 hits = [any(r["answer"].lower() in p.lower() for _, p in search(r["question"])) for r in rows]
-print(f"Answer found in top-3 passages for {np.mean(hits):.1%} of {len(rows)} questions")
+print(f"Exact answer text appears in the top-3 passages for {np.mean(hits):.1%} of {len(rows)} questions")
+print("(A strict check: answers phrased differently from the passage count as misses, so the true hit rate is higher.)")
 """)
 md("""
 ### 3. Zero-shot router on Banking77
 Real customer-support messages, 77 intents. **No training**: we embed each intent's name and send every message to the closest one. Random guessing would get 1.3%.
+
+*Banking77 is a public benchmark the model may have seen during training, so expect somewhat lower accuracy on your own tickets. Always test on your own data.*
 """)
 code("""
 bank = load_dataset("mteb/banking77", split="test").shuffle(seed=0).select(range(1000))
@@ -271,9 +276,9 @@ md("""
 **Flickr8k**: photos with human-written captions. We embed 200 photos, then search them with each photo's caption and check how often the right photo comes first.
 """)
 code("""
-flickr = load_dataset("jxie/flickr8k", split="test").select(range(200))
-images = [im.convert("RGB") for im in flickr["image"]]
-captions = flickr["caption_0"]
+rows = list(load_dataset("jxie/flickr8k", split="test", streaming=True).take(200))  # stream just 200 photos
+images = [r["image"].convert("RGB") for r in rows]
+captions = [r["caption_0"] for r in rows]
 
 try:
     img_emb = vision_model.encode(images, normalize_embeddings=True, convert_to_numpy=True, batch_size=16)
