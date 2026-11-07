@@ -1,404 +1,297 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Typed Assistant</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Type-safe assistant</title>
 <style>
-:root{
-  color-scheme:dark;
-  --bg:#05070a; --surface:#10141a; --surface-2:#161b23; --surface-hi:#1b2433;
-  --ink:#f1f3f5; --muted:#a3a9b3; --faint:#6d7480;
-  --blue:#6ea0ff; --blue-strong:#3f7ff0; --green:#7fcf98; --yellow:#f6c344; --red:#f28b82; --purple:#b49cff;
-  --radius:12px;
-  --sans:"Google Sans",Arial,Helvetica,"Nirmala UI","Noto Sans Malayalam",Kartika,sans-serif;
-  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,"Nirmala UI","Noto Sans Malayalam",monospace;
-}
+:root{color-scheme:dark;--bg:#05070a;--surface:#10141a;--surface-2:#161b23;--surface-hi:#1b2433;--ink:#f1f3f5;--muted:#a3a9b3;--faint:#6d7480;
+  --blue:#6ea0ff;--green:#7fcf98;--yellow:#f6c344;--red:#f28b82;--radius:14px;
+  --sans:Arial,Helvetica,"Nirmala UI","Noto Sans Malayalam",sans-serif;--mono:"JetBrains Mono",Consolas,ui-monospace,"Nirmala UI",monospace}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans)}
-body{min-height:100dvh;padding:18px clamp(16px,3vw,48px) 16px;display:flex;flex-direction:column;gap:16px}
-h1,h2,h3,p{margin:0}
-button{font:inherit;color:inherit}
-:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
-
-header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
-h1{font-size:clamp(28px,2.6vw,42px);font-weight:500;letter-spacing:-.025em;line-height:1.1}
-.sub{color:var(--muted);font-size:clamp(14px,1vw,17px);margin-top:6px}
-.hright{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.status{display:inline-flex;align-items:center;gap:10px;background:var(--surface);border-radius:999px;padding:9px 16px;font-size:15px;color:var(--muted);white-space:nowrap}
-.dot{width:9px;height:9px;border-radius:50%;background:var(--green)}
-.status.busy .dot{background:var(--yellow)}
-.status.err .dot{background:var(--red)}
-.pill{background:var(--surface);border:0;border-radius:999px;padding:9px 16px;font-size:15px;color:var(--muted);cursor:pointer}
-.pill:hover{background:var(--surface-hi);color:var(--ink)}
-.pill[aria-expanded="true"]{background:var(--surface-hi);color:var(--ink)}
-
-main{flex:1;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.8fr) minmax(0,.85fr);column-gap:clamp(16px,2vw,32px);align-items:start}
-body.types-closed main{grid-template-columns:minmax(0,1.3fr) minmax(0,.9fr)}
-body.types-closed #types{display:none}
-.col{display:flex;flex-direction:column;gap:12px;min-width:0}
-.k{font-size:15px;color:var(--muted)}
-
+html,body{margin:0;height:100%}
+body{background:radial-gradient(ellipse at 80% 90%,#0d1d36,#05070a 60%);color:var(--ink);font-family:var(--sans);display:flex;flex-direction:column;min-height:100dvh;padding:40px 56px 28px}
+button{font:inherit;color:inherit;border:0;cursor:pointer}
+header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}
+h1{margin:0;font-weight:500;font-size:46px;letter-spacing:-.025em}
+.sub{margin:8px 0 0;color:var(--muted);font-size:19px}
+.status{display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:999px;padding:10px 18px;font-size:16px;color:var(--muted);white-space:nowrap}
+.status i{width:9px;height:9px;border-radius:50%;background:var(--green)}
+.status.busy i{background:var(--yellow)}.status.err i{background:var(--red)}
+main{flex:1;display:grid;grid-template-columns:1.45fr 1fr;gap:40px;margin-top:30px;min-height:0}
 /* input */
-.inwrap{display:flex;flex-direction:column;gap:6px}
-textarea{width:100%;min-height:68px;resize:none;overflow:hidden;background:var(--surface);color:var(--ink);border:0;border-radius:var(--radius);padding:16px 20px;font:inherit;font-size:clamp(20px,1.6vw,26px);line-height:1.35}
-textarea::placeholder{color:var(--faint)}
-textarea:focus-visible{outline:2px solid var(--blue);outline-offset:0}
-.pending{font-size:15px;color:var(--yellow);display:none;gap:10px;align-items:baseline;flex-wrap:wrap}
-.pending.on{display:flex}
-.pending button{background:none;border:0;color:var(--muted);cursor:pointer;padding:0;font-size:14px;text-decoration:underline}
-.hint{font-size:13.5px;color:var(--faint)}
-kbd{font-family:var(--mono);font-size:12px;background:var(--surface-2);color:var(--muted);border-radius:6px;padding:2px 6px}
-.examples{display:flex;flex-wrap:wrap;gap:7px}
-.ex{background:var(--surface);border:0;border-radius:999px;padding:6px 12px;cursor:pointer;font-size:clamp(13.5px,.9vw,15px);line-height:1.3;color:var(--ink);text-align:left}
-.ex:hover{background:var(--surface-hi)}
-.ex .n{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin-right:7px}
-
-/* result */
-.result{background:var(--surface);border-radius:var(--radius);padding:16px 20px;display:flex;flex-direction:column;gap:10px;min-height:200px}
-.verdict{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
-.verdict .badge{font-size:15px;font-weight:500;border-radius:8px;padding:4px 10px;background:var(--surface-hi)}
-.ok .badge{color:var(--green)}
-.clarify .badge{color:var(--yellow)}
-.unsure .badge{color:var(--purple)}
-.verdict .tool{font-family:var(--mono);font-size:15px;color:var(--muted)}
-.question{font-size:clamp(21px,1.75vw,28px);font-weight:500;letter-spacing:-.015em;line-height:1.25;overflow-wrap:anywhere}
-.clarify .question{color:var(--yellow)}
-.unsure .question{color:var(--purple)}
-pre.code{margin:0;background:#0a0d12;border-radius:10px;padding:14px 16px;font-family:var(--mono);font-size:clamp(16px,1.25vw,20px);line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink)}
-pre.code .fn{color:var(--blue)}
-pre.code .s{color:var(--green)}
-pre.code .n{color:var(--yellow)}
-pre.code .b{color:var(--purple)}
-pre.code .p{color:var(--muted)}
-pre.code .q{color:var(--red)}
-pre.json{font-size:13px;color:var(--muted);padding:8px 14px}
-.effect{font-size:16px;color:var(--green)}
-.opts{display:flex;flex-wrap:wrap;gap:8px}
-.opt{background:var(--surface-hi);border:0;border-radius:999px;padding:8px 15px;font-size:16px;cursor:pointer}
-.opt:hover{background:#26324a}
-.opt .n{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin-right:6px}
-.issues{margin:0;padding:0;list-style:none;font-size:15px;color:var(--muted);display:flex;flex-direction:column;gap:3px}
-.trace{display:grid;grid-template-columns:max-content max-content minmax(0,1fr);gap:3px 12px;font-size:14px;align-items:baseline}
-.trace .f{font-family:var(--mono);color:var(--ink)}
-.trace .h{color:var(--faint)}
-.trace .v{color:var(--muted);overflow-wrap:anywhere}
-.waiting{color:var(--faint);font-size:20px}
-.detail{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px;align-items:start}
-.efflat{display:flex;flex-wrap:wrap;gap:6px 22px;align-items:baseline}
-
-.lat{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:15px;color:var(--muted);align-items:baseline}
-.lat .ms{font-family:var(--mono);font-size:19px;color:var(--ink);font-variant-numeric:tabular-nums}
-.ranks{display:flex;flex-direction:column;gap:6px}
-.rk{display:grid;grid-template-columns:minmax(0,8.5em) minmax(0,1fr) 3.8em;gap:10px;align-items:center;font-size:14px}
-.rk .nm{font-family:var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rk .bar{height:7px;background:var(--surface-hi);border-radius:4px;overflow:hidden}
-.rk .bar i{display:block;height:100%;background:#3a4a66;border-radius:4px}
-.rk.top .nm{color:var(--ink)}
-.rk.top .bar i{background:var(--blue)}
-.rk .sc{font-family:var(--mono);text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
-
+.ask{display:flex;gap:12px}
+#box{flex:1;font:inherit;font-size:30px;color:var(--ink);background:var(--surface);border:2px solid #2a3343;border-radius:var(--radius);padding:18px 22px;outline:0;resize:none;line-height:1.3}
+#box:focus{border-color:var(--blue)}
+#go{background:#1d4ea8;border-radius:var(--radius);padding:0 26px;font-size:20px}
+.pending{display:none;margin-top:10px;font-size:16px;color:var(--yellow)}
+.pending.on{display:block}
+.pending button{background:none;color:var(--muted);text-decoration:underline;padding:0 0 0 8px;font-size:15px}
+.examples{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.examples button{background:var(--surface);border-radius:999px;padding:10px 16px;font-size:18px;color:#dfe3e8}
+.examples button:hover,.examples button:focus-visible{background:var(--surface-hi);outline:0}
+.examples kbd{font:13px var(--mono);color:var(--faint);margin-right:8px}
+/* answer card */
+.card{margin-top:26px;background:var(--surface);border-radius:20px;padding:28px 32px;min-height:250px}
+.card.ok{background:linear-gradient(0deg,#0f1a14,#10141a 70%)}
+.card.clarify{background:linear-gradient(0deg,#1d180c,#10141a 70%)}
+.verdict{font-size:20px;font-weight:600}
+.ok .verdict{color:var(--green)}.clarify .verdict{color:var(--yellow)}.unsure .verdict{color:var(--muted)}
+.call{margin:16px 0 0;font:500 31px/1.4 var(--mono);white-space:pre-wrap;word-break:break-word}
+.call .fn{color:var(--blue)}.call .k{color:var(--muted)}.call .s{color:var(--green)}.call .n{color:var(--yellow)}.call .q{color:var(--red)}
+.done{margin-top:16px;font-size:22px;color:var(--ink)}
+.question{margin:14px 0 0;font-size:32px;line-height:1.3;color:var(--yellow)}
+.unsure .question{color:var(--ink)}
+.partial{margin-top:14px;font:20px var(--mono);color:var(--muted)}
+.partial .q{color:var(--red)}
+.opts{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.opts button{background:var(--surface-hi);border-radius:12px;padding:12px 20px;font-size:21px}
+.opts button:hover,.opts button:focus-visible{background:#26344c;outline:0}
+.meta{margin-top:18px;font-size:15px;color:var(--faint)}
+.empty{color:var(--faint);font-size:22px;line-height:1.5}
 /* home */
-.home{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.tile{background:var(--surface);border-radius:var(--radius);padding:11px 14px;display:flex;flex-direction:column;gap:5px;min-width:0;transition:background .4s}
+.home h2{margin:0 0 14px;font-size:16px;font-weight:600;color:var(--muted)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.tile{background:var(--surface);border-radius:var(--radius);padding:20px 22px;transition:background .6s,box-shadow .6s;min-height:132px}
 .tile.wide{grid-column:1/-1}
-.tile.flash{background:#1d3150}
-.tile h3{font-size:14px;font-weight:500;color:var(--muted)}
-.tile .big{font-size:18px;line-height:1.3;overflow-wrap:anywhere}
-.tile .small{font-size:13.5px;color:var(--muted);line-height:1.35;overflow-wrap:anywhere}
-.tile .none{color:var(--faint)}
-.lights{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.bulb{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:13px;color:var(--muted);text-align:center}
-.bulb i{width:26px;height:26px;border-radius:50%;background:var(--surface-hi)}
-.bulb.on i{background:var(--yellow);box-shadow:0 0 18px rgba(246,195,68,.55)}
-.bulb.on{color:var(--ink)}
-.doors{display:flex;gap:16px;flex-wrap:wrap;font-size:16px}
-.doors .lk{color:var(--green)} .doors .ul{color:var(--red)}
-.calllog{display:flex;flex-direction:column;gap:3px;font-family:var(--mono);font-size:12.5px;color:var(--muted)}
-.calllog span{overflow-wrap:anywhere}
-.reset{align-self:flex-start;background:none;border:0;color:var(--faint);font-size:13.5px;cursor:pointer;padding:0;text-decoration:underline}
+.tile.flash{background:var(--surface-hi);box-shadow:0 0 0 2px var(--blue) inset}
+.tile h3{margin:0 0 12px;font-size:15px;font-weight:600;color:var(--muted)}
+.big{display:block;font-size:26px}
+.small{display:block;font-size:16px;color:var(--muted);margin-top:4px}
+.bulbs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;font-size:15px;color:var(--muted)}
+.bulbs i{display:block;width:34px;height:34px;margin:0 auto 8px;border-radius:50%;background:#262c36;transition:background .4s,box-shadow .4s}
+.bulbs .on i{background:var(--yellow);box-shadow:0 0 22px #f6c34488}
+.bulbs .on{color:var(--ink)}
+.lk{color:var(--green)}.ul{color:var(--red)}
+.foot{display:flex;justify-content:space-between;align-items:center;margin-top:18px;font-size:14px;color:var(--faint)}
+.foot button{background:none;color:var(--faint);font-size:14px;padding:0}
+.foot kbd{font:12px var(--mono);background:var(--surface);padding:2px 6px;border-radius:5px;color:var(--muted)}
+/* details drawer (D) */
+#details{position:fixed;inset:auto 0 0 0;max-height:62vh;overflow:auto;background:#0a0d12;box-shadow:0 -12px 40px #000c;padding:26px 56px 30px;transform:translateY(100%);transition:transform .3s;display:grid;grid-template-columns:1.2fr 1fr;gap:34px}
+body.details #details{transform:none}
+#details h4{margin:0 0 10px;font-size:14px;color:var(--blue)}
+#details pre{margin:0 0 16px;font:14px/1.6 var(--mono);color:#dfe3e8;white-space:pre-wrap;word-break:break-word}
+#details table{border-collapse:collapse;font-size:14px;margin-bottom:16px}
+#details td{padding:3px 14px 3px 0;color:var(--muted)}#details td:first-child{color:var(--ink)}
+#details .sig{font:13px/1.55 var(--mono);color:#cfe0ff;margin-bottom:8px}
+#details p{font-size:13.5px;line-height:1.55;color:var(--faint);margin:0}
 
-/* types */
-#types{background:var(--surface);border-radius:var(--radius);padding:16px 18px;display:flex;flex-direction:column;gap:12px;max-height:calc(100dvh - 130px);overflow:auto}
-#types h2{font-size:17px;font-weight:500}
-#types .tsub{font-size:13.5px;color:var(--faint);line-height:1.45}
-.sig{display:flex;flex-direction:column;gap:3px}
-.sig code{font-family:var(--mono);font-size:13px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
-.sig code .fn{color:var(--blue)}
-.sig code .pn{color:var(--ink)}
-.sig code .opt{background:none;padding:0;font-size:inherit;color:var(--faint);border-radius:0;cursor:auto}
-.sig .d{font-size:13px;color:var(--faint)}
-
-footer{font-size:13px;color:var(--faint);line-height:1.5}
-
-@media (max-width:1180px){
-  main,body.types-closed main{grid-template-columns:minmax(0,1.3fr) minmax(0,.9fr)}
-  #types{grid-column:1/-1;max-height:none;margin-top:16px}
-}
-@media (max-width:760px){
-  body{padding-top:16px;gap:14px}
-  main,body.types-closed main{grid-template-columns:minmax(0,1fr);row-gap:16px}
-  #types{margin-top:0}
-  .status{white-space:normal}
-  .detail{grid-template-columns:minmax(0,1fr)}
-  .hint{display:none}
-  .trace{grid-template-columns:max-content minmax(0,1fr)}
-  .trace .h{display:none}
-  .rk{grid-template-columns:minmax(0,8.5em) minmax(0,1fr) 3.8em}
-}
+/* Step 1: the 8 actions, full screen, before the live demo */
+#intro{position:fixed;inset:0;background:radial-gradient(ellipse at 80% 90%,#0d1d36,#05070a 60%);padding:44px 56px;display:flex;flex-direction:column;z-index:5;overflow:auto}
+body.started #intro{display:none}
+#intro h1{font-size:50px}
+#intro .sub{font-size:21px;max-width:1100px}
+.toolgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:30px}
+.tcard{background:var(--surface);border-radius:16px;padding:20px 22px}
+.tcard .nm{display:flex;align-items:center;gap:10px;font-size:24px;font-weight:500}
+.tcard .ic{font-size:26px}
+.tcard .what{font-size:16px;color:var(--muted);margin-top:6px}
+.tcard .params{margin:14px 0 0;padding:0;list-style:none;display:grid;gap:6px}
+.tcard .params li{font-size:15.5px;color:#dfe3e8}
+.tcard .params b{font:600 14px var(--mono);color:var(--blue);margin-right:6px}
+.tcard .params small{color:var(--faint);margin-left:4px}
+.tcard .ex{margin-top:14px;font-size:15.5px;color:var(--green)}
+.introfoot{margin-top:auto;padding-top:24px;display:flex;align-items:center;gap:18px;font-size:18px;color:var(--muted)}
+.introfoot button{background:#1d4ea8;border-radius:12px;padding:14px 26px;font-size:20px;color:#fff}
+/* Step 2: the same 8 actions as a strip; the chosen one lights up */
+.strip h2,.home h2{margin:0 0 12px;font-size:16px;font-weight:600;color:var(--muted)}
+.strip{margin-bottom:24px}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.chip{background:var(--surface);border-radius:10px;padding:10px 12px;font-size:16px;color:var(--muted);display:flex;align-items:center;gap:8px;transition:background .3s,color .3s,box-shadow .3s}
+.chip .ic{font-size:18px}
+.chip.ok{background:#14301f;color:#fff;box-shadow:0 0 0 2px var(--green) inset}
+.chip.clarify{background:#33290f;color:#fff;box-shadow:0 0 0 2px var(--yellow) inset}
+.chip.maybe{background:var(--surface-hi);color:#fff;box-shadow:0 0 0 2px #5f6672 inset}
+@media(max-width:1000px){#intro{padding:24px 16px}#intro h1{font-size:32px}.toolgrid{grid-template-columns:1fr 1fr}.chips{grid-template-columns:1fr 1fr}}
+@media(max-width:1000px){body{padding:22px 16px;min-height:auto}header{flex-direction:column;gap:12px}main{grid-template-columns:1fr;gap:28px;flex:none}h1{font-size:32px}.sub{font-size:16px}#box{font-size:21px;padding:14px 16px}.examples button{font-size:16px}.card{padding:22px;min-height:0}.call{font-size:21px}.question{font-size:23px}.foot span{display:none}#details{grid-template-columns:1fr;padding:20px 16px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
+<section id="intro" aria-label="What this assistant can do">
+  <h1>This assistant can only do 8 things</h1>
+  <p class="sub">Each action has typed values: a fixed list of choices, a number range, or text. Whatever you say, the model picks one of these 8 by meaning, and every value is checked before anything runs.</p>
+  <div class="toolgrid" id="toolgrid"></div>
+  <div class="introfoot"><button id="start">Try it →</button><span>Press <b>Enter</b> or <b>→</b> to start · <b>T</b> brings this back</span></div>
+</section>
 <header>
-  <div>
-    <h1>Say it. Get a typed call.</h1>
-    <p class="sub">EmbeddingGemma 2 picks the tool · regex + lexicon fill the fields · a validator checks every type · no LLM</p>
-  </div>
-  <div class="hright">
-    <button class="pill" id="typesBtn" type="button" aria-controls="types" aria-expanded="true">Tool schemas <kbd>Alt</kbd>+<kbd>T</kbd></button>
-    <div class="status" id="status" role="status"><span class="dot"></span><span id="statusText">running locally on CPU · offline</span></div>
-  </div>
+  <div><h1>Say it. Get a typed call.</h1><p class="sub">EmbeddingGemma 2 picks the action by meaning, then every value is checked against its type. Nothing invalid ever runs.</p></div>
+  <div class="status" id="status"><i></i><span id="statusText">running locally on CPU · offline</span></div>
 </header>
-
 <main>
-  <section class="col" aria-label="Command and result">
-    <div class="inwrap">
-      <label class="k" for="q">Tell the house what to do</label>
-      <textarea id="q" rows="1" placeholder="e.g. set the bedroom AC to 22 in cool mode" autofocus spellcheck="false"></textarea>
-      <div class="pending" id="pending" aria-live="polite"><span id="pendingText"></span><button type="button" id="cancelPending">cancel</button></div>
-      <p class="hint"><kbd>Enter</kbd> run · <kbd>Shift</kbd>+<kbd>Enter</kbd> new line · <kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>0</kbd> examples · <kbd>Esc</kbd> clear · <kbd>/</kbd> focus</p>
-    </div>
-    <div class="examples" id="examples" aria-label="Example commands"></div>
-    <div class="result" id="result" aria-live="polite"><span class="waiting">Press Enter to turn a sentence into a function call.</span></div>
+  <section>
+    <div class="ask"><textarea id="box" rows="1" placeholder="Tell the house what to do…" aria-label="Command" autofocus></textarea><button id="go" aria-label="Run">Run</button></div>
+    <div class="pending" id="pending"><span id="pendingText"></span><button id="cancelPending">cancel</button></div>
+    <div class="examples" id="examples"></div>
+    <div class="card" id="card"><p class="empty">Type a command, or pick an example above.<br>The answer is always a valid call, a question, or “not sure”.</p></div>
   </section>
-
-  <section class="col" aria-label="Home state">
-    <div class="home" id="home"></div>
-    <button class="reset" id="reset" type="button">Reset the house</button>
-  </section>
-
-  <aside id="types" aria-label="Tool schemas">
-    <h2>8 typed tools</h2>
-    <p class="tsub">The only things this assistant can do. Every argument is checked against these types before a call runs.</p>
-    <div id="sigs"></div>
-  </aside>
+  <section class="home"><div class="strip"><h2>It picks one of these 8 actions</h2><div class="chips" id="chips"></div></div><h2>The house</h2><div class="tiles" id="home"></div></section>
 </main>
+<div class="foot"><span><kbd>Enter</kbd> run · <kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>6</kbd> examples · <kbd>Esc</kbd> clear · <kbd>T</kbd> the 8 actions · <kbd>D</kbd> details</span><button id="reset">Reset the house</button></div>
 
-<footer id="foot">One embedding per message (EmbeddingGemma 2, ~80 ms on this CPU) picks the tool. Nothing leaves this laptop.</footer>
+<aside id="details" aria-label="Details">
+  <div><h4>Typed call as JSON</h4><pre id="dJson">—</pre><h4>How each value was filled</h4><table id="dTrace"></table><h4>Action scores (cosine similarity)</h4><table id="dRank"></table><p id="dFoot"></p></div>
+  <div><h4>The only 8 actions it can take</h4><div id="dSigs"></div></div>
+</aside>
 
 <script>
-const EXAMPLES = [
-  ["set the bedroom AC to 22 in cool mode"],
-  ["dim the living room lights to 30%"],
-  ["remind me to call Achan at 7:30 pm"],
-  ["bedroom light off aakku", "Manglish: turn the bedroom light off"],
-  ["അമ്മയ്ക്ക് മെസ്സേജ് അയക്കൂ ഞാൻ വൈകും", "Malayalam: message Amma, I'll be late"],
-  ["രണ്ട് ബിരിയാണി ഓർഡർ ചെയ്യൂ", "Malayalam: order two biryanis"],
-  ["set AC to 40"],
-  ["turn on the light"],
-  ["order the onam feast for 4", "no synonym for the dish: picked by meaning"],
-  ["what's the weather in Kochi"],
-];
 const $ = id => document.getElementById(id);
-const box = $("q"), result = $("result"), status = $("status"), statusText = $("statusText");
-let ctrl = null, seq = 0, pending = null, lastQuery = "", state = null, flashKeys = [];
-const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const box = $("box"), card = $("card");
+const NAMES = {set_light: "Lights", set_ac: "AC", set_timer: "Timer", play_music: "Music", send_message: "Message",
+               set_reminder: "Reminder", lock_door: "Doors", order_food: "Food order"};
+const EXAMPLES = ["set the bedroom AC to 22 in cool mode", "bedroom light off aakku", "അമ്മയ്ക്ക് മെസ്സേജ് അയക്കൂ ഞാൻ വൈകും",
+                  "set AC to 40", "turn on the light", "what's the weather in Kochi"];
+const ICON = {set_light: "💡", set_ac: "❄️", set_timer: "⏲️", play_music: "🎵", send_message: "💬", set_reminder: "⏰", lock_door: "🔒", order_food: "🍛"};
+const SAY = {set_light: "“turn off the bedroom light”", set_ac: "“bedroom AC to 22, cool”", set_timer: "“timer for 10 minutes”", play_music: "“play some melody”",
+             send_message: "“tell Amma I’ll be late”", set_reminder: "“remind me at 7:30 pm to call Achan”", lock_door: "“lock the back door”", order_food: "“order 2 biryani”"};
+// Turn schema types into plain words: "a" | "b" → a / b, int[16..30] → 16–30, str → any text, bool → on / off.
+function plain(type) {
+  if (type.includes('|')) return [...type.matchAll(/"([^"]+)"/g)].map(m => m[1]).join(' / ');
+  const r = type.match(/int\[(\d+)\.\.(\d+)\]/); if (r) return `number ${r[1]}–${r[2]}`;
+  return ({str: 'any text', bool: 'on / off', '"HH:MM"': 'time, e.g. 19:30'})[type] || type;
+}
+function renderTools(tools) {
+  $("toolgrid").innerHTML = tools.map(t => `<div class="tcard"><div class="nm"><span class="ic">${ICON[t.name] || "•"}</span>${esc(NAMES[t.name] || t.name)}</div>
+    <div class="what">${esc(t.description)}</div>
+    <ul class="params">${t.params.map(p => `<li><b>${esc(p.name)}</b>${esc(plain(p.type))}${p.required ? "" : "<small>(optional)</small>"}</li>`).join("")}</ul>
+    <div class="ex">${SAY[t.name] || ""}</div></div>`).join("");
+  $("chips").innerHTML = tools.map(t => `<div class="chip" data-t="${t.name}"><span class="ic">${ICON[t.name] || "•"}</span>${esc(NAMES[t.name] || t.name)}</div>`).join("");
+}
+function lightChips(d) {
+  document.querySelectorAll(".chip").forEach(c => {
+    const t = c.dataset.t;
+    c.className = "chip" + (d.status === "ok" && t === d.tool ? " ok" : d.status === "clarify" && t === d.tool ? " clarify" : d.status === "unsure" && d.options.includes(t) ? " maybe" : "");
+  });
+}
+function start() { document.body.classList.add("started"); box.focus(); }
+function showTools() { document.body.classList.remove("started"); $("start").focus(); }
+$("start").onclick = start;
+let pending = null, lastQuery = "", state = null, flash = [], ctrl = null, seq = 0, lastEffect = null;
 
-EXAMPLES.forEach(([text, gloss], i) => {
-  const b = document.createElement("button");
-  b.type = "button"; b.className = "ex";
-  b.innerHTML = `<span class="n">${(i + 1) % 10}</span><span class="t"></span>`;
-  b.querySelector(".t").textContent = text;
-  if (gloss) { b.title = gloss; if (/[\u0D00-\u0D7F]/.test(text) || /aakku/.test(text)) b.lang = "ml"; }
-  b.setAttribute("aria-label", `Example ${(i + 1) % 10}: ${text}${gloss ? " (" + gloss + ")" : ""}`);
-  b.addEventListener("click", () => runText(text, true));
-  $("examples").appendChild(b);
-});
+$("examples").innerHTML = EXAMPLES.map((t, i) => `<button data-i="${i}"><kbd>${i + 1}</kbd>${esc(t)}</button>`).join("");
+$("examples").addEventListener("click", e => { const b = e.target.closest("button"); if (b) runText(EXAMPLES[+b.dataset.i]); });
 
-function runText(text, fresh) {
-  if (fresh) clearPending();
-  box.value = text; grow(); box.focus(); run();
+/* ---------- rendering ---------- */
+function val(v) { return typeof v === "string" ? `<span class="s">"${esc(v)}"</span>` : typeof v === "boolean" ? `<span class="n">${v ? "True" : "False"}</span>` : `<span class="n">${esc(v)}</span>`; }
+function callHtml(tool, args, holes = []) {
+  const parts = Object.entries(args).map(([k, v]) => `<span class="k">${esc(k)}=</span>${val(v)}`)
+    .concat(holes.map(f => `<span class="k">${esc(f)}=</span><span class="q">?</span>`));
+  return `<span class="fn">${esc(tool)}</span>(${parts.join(", ")})`;
 }
-function grow() { box.style.height = "auto"; box.style.height = Math.max(68, box.scrollHeight + 2) + "px"; }
-box.addEventListener("input", grow);
-
-/* ---------- code rendering ---------- */
-function val(v) {
-  if (v === true || v === false) return `<span class="b">${v ? "True" : "False"}</span>`;
-  if (typeof v === "number") return `<span class="n">${v}</span>`;
-  return `<span class="s">${esc(JSON.stringify(v))}</span>`;
+function meta(d) {
+  const ms = d.cached ? "" : ` · ${Math.round(d.ms.total)} ms on this CPU`;
+  return d.tool && d.score != null ? `Picked <b>${esc(NAMES[d.tool] || d.tool)}</b> by meaning (score ${d.score.toFixed(2)})${ms}` : (ms ? ms.slice(3) : "");
 }
-function callHtml(tool, args, missing) {
-  const parts = Object.entries(args).map(([k, v]) => `${esc(k)}=${val(v)}`);
-  (missing || []).forEach(f => parts.push(`${esc(f)}=<span class="q">?</span>`));
-  return `<span class="fn">${esc(tool)}</span><span class="p">(</span>${parts.join('<span class="p">, </span>')}<span class="p">)</span>`;
-}
-
-function latency(d) {
-  const ex = d.ms.extract + d.ms.validate;
-  return `<div class="lat"><span><span class="ms">${d.cached ? d.ms.embed.toFixed(1) : Math.round(d.ms.embed)}</span> ms embed${d.cached ? " (cached)" : ""}</span>
-    <span><span class="ms">${ex < 1 ? ex.toFixed(2) : ex.toFixed(1)}</span> ms extract + validate</span>
-    <span><span class="ms">${Math.round(d.ms.total)}</span> ms total</span></div>`;
-}
-function ranks(d) {
-  const w = s => Math.max(2, Math.min(100, (s - 0.6) / 0.4 * 100));
-  return `<div class="ranks" aria-label="Tool scores">${d.ranked.slice(0, 3).map((r, i) =>
-    `<div class="rk ${i === 0 ? "top" : ""}"><span class="nm">${esc(r.tool)}</span><span class="bar"><i style="width:${w(r.score)}%"></i></span><span class="sc">${r.score.toFixed(3)}</span></div>`).join("")}</div>`;
-}
-function traceHtml(d) {
-  if (!d.trace.length) return "";
-  return `<div class="trace" aria-label="How each field was filled">${d.trace.map(t =>
-    `<span class="f">${esc(t.field)}</span><span class="h">${esc(t.how)}</span><span class="v">${esc(t.value)}</span>`).join("")}</div>`;
-}
-
 function render(d) {
-  const sc = d.score != null ? d.score.toFixed(3) : "";
   let h = "";
   if (d.status === "ok") {
-    result.className = "result ok";
-    h += `<div class="verdict"><span class="badge">✅ Valid typed call</span><span class="tool">${esc(d.tool)} · score ${sc}${d.mode === "answer" ? " · completed by your answer" : ""}</span></div>`;
-    h += `<pre class="code" aria-label="Function call">${callHtml(d.tool, d.args)}</pre>`;
-    h += `<pre class="code json" aria-label="JSON">${esc(JSON.stringify(d.json))}</pre>`;
-    h += `<div class="efflat"><span class="effect">Executed: ${esc(d.effect)}</span>${latency(d)}</div>`;
+    card.className = "card ok";
+    h = `<div class="verdict">✅ Valid call, it ran</div><div class="call">${callHtml(d.tool, d.args)}</div>`
+      + (d.effect ? `<div class="done">${esc(d.effect)}</div>` : "") + `<div class="meta">${meta(d)}</div>`;
+    lastEffect = d.effect;
   } else if (d.status === "clarify") {
-    result.className = "result clarify";
-    const missing = d.issues.filter(i => i.kind === "missing").map(i => i.field);
+    card.className = "card clarify";
     const bad = d.issues.filter(i => i.kind !== "missing").map(i => i.field);
+    const missing = d.issues.filter(i => i.kind === "missing").map(i => i.field).filter(f => !bad.includes(f));
     const shown = Object.fromEntries(Object.entries(d.args).filter(([k]) => !bad.includes(k)));
-    h += `<div class="verdict"><span class="badge">❓ Needs an answer, nothing ran</span><span class="tool">${esc(d.tool)} · score ${sc}</span></div>`;
-    h += `<p class="question">${esc(d.question)}</p>`;
-    if (d.options.length) h += `<div class="opts">${d.options.map((o, i) => `<button type="button" class="opt" data-answer="${esc(o)}">${esc(o)}</button>`).join("")}</div>`;
-    h += `<pre class="code" aria-label="Partial call">${callHtml(d.tool, shown, [...bad, ...missing.filter(f => !bad.includes(f))])}</pre>`;
-    if (d.issues.length > 1) h += `<ul class="issues">${d.issues.slice(1).map(i => `<li>Then: ${esc(i.question)}</li>`).join("")}</ul>`;
-    h += latency(d);
+    h = `<div class="verdict">❓ Needs one more thing, nothing ran</div><p class="question">${esc(d.question)}</p>`
+      + (d.options.length ? `<div class="opts">${d.options.map(o => `<button data-answer="${esc(o)}">${esc(o)}</button>`).join("")}</div>` : "")
+      + `<div class="partial">${callHtml(d.tool, shown, [...bad, ...missing])}</div><div class="meta">${meta(d)}</div>`;
   } else {
-    result.className = "result unsure";
-    h += `<div class="verdict"><span class="badge">🤷 Unsure which action, nothing ran</span><span class="tool">${esc(d.reason)}</span></div>`;
-    h += `<p class="question">${esc(d.question)}</p>`;
-    h += `<div class="opts">${d.options.map((o, i) => `<button type="button" class="opt" data-tool="${esc(o)}">${esc(o)}</button>`).join("")}</div>`;
-    h += latency(d);
+    card.className = "card unsure";
+    h = `<div class="verdict">🤷 Not sure what you want, nothing ran</div><p class="question">Did you mean…</p>`
+      + `<div class="opts">${d.options.map(o => `<button data-tool="${esc(o)}">${esc(NAMES[o] || o)}</button>`).join("")}</div>`
+      + `<div class="meta">None of the 8 actions is a confident match.</div>`;
   }
-  h += `<div class="detail">${traceHtml(d) || '<span class="hint">No fields extracted: the tool is not chosen yet.</span>'}${ranks(d)}</div>`;
-  result.innerHTML = h;
-  result.querySelectorAll("[data-answer]").forEach(b => b.addEventListener("click", () => answer(b.dataset.answer)));
-  result.querySelectorAll("[data-tool]").forEach(b => b.addEventListener("click", () => chooseTool(b.dataset.tool)));
-
+  card.innerHTML = h;
+  card.querySelectorAll("[data-answer]").forEach(b => b.onclick = () => answer(b.dataset.answer));
+  card.querySelectorAll("[data-tool]").forEach(b => b.onclick = () => chooseTool(b.dataset.tool));
   if (d.status === "clarify") {
     pending = {tool: d.tool, args: d.args, field: d.issues[0].field};
-    $("pendingText").textContent = `Answering ${d.tool}: type the ${d.issues[0].field}, pick an option, or type a new command.`;
-    $("pending").classList.add("on");
-    if (document.activeElement === box || document.activeElement === document.body) box.select();  // typing replaces the old command
+    $("pendingText").textContent = `Answering ${NAMES[d.tool] || d.tool}: type the ${d.issues[0].field}, pick an option, or type a new command.`;
+    $("pending").classList.add("on"); box.select();
   } else clearPending();
-  if (d.status === "ok") flashKeys = flashFor(d.tool);
+  if (d.status === "ok") flash = [TILE[d.tool] || "last", "last"];
   renderHome(d.state);
+  renderDetails(d);
+  lightChips(d);
 }
-
+function renderDetails(d) {
+  $("dJson").textContent = d.json ? JSON.stringify(d.json, null, 2) : "No call yet: " + (d.status === "clarify" ? "waiting for an answer." : "action not chosen.");
+  $("dTrace").innerHTML = (d.trace || []).map(t => `<tr><td>${esc(t.field)}</td><td>${esc(t.how)}</td><td>${esc(t.value)}</td></tr>`).join("") || "<tr><td>—</td></tr>";
+  $("dRank").innerHTML = (d.ranked || []).slice(0, 4).map(r => `<tr><td>${esc(r.tool)}</td><td>${r.score.toFixed(3)}</td></tr>`).join("");
+}
 function clearPending() { pending = null; $("pending").classList.remove("on"); }
+
+/* ---------- the house: only what matters on a projector ---------- */
+const TILE = {set_light: "lights", set_ac: "ac", lock_door: "doors"};
+function tile(key, title, body, wide) { return `<div class="tile ${wide ? "wide" : ""} ${flash.includes(key) ? "flash" : ""}"><h3>${title}</h3>${body}</div>`; }
+function renderHome(s) {
+  if (!s) return; state = s;
+  const bulbs = Object.entries(s.lights).map(([r, l]) => `<div class="${l.on ? "on" : ""}"><i style="${l.on ? `opacity:${.4 + .6 * l.brightness / 100}` : ""}"></i>${esc(r)}<span class="small">${l.on ? l.brightness + "%" : "off"}</span></div>`).join("");
+  const ac = Object.entries(s.ac);
+  const doors = Object.entries(s.doors).map(([d, l]) => `<span class="big">${esc(d)} <span class="${l ? "lk" : "ul"}">${l ? "locked" : "open"}</span></span>`).join("");
+  const last = lastEffect || (s.log[0] && s.log[0].code);
+  let h = tile("lights", "Lights", `<div class="bulbs">${bulbs}</div>`, true);
+  h += tile("ac", "AC", ac.length ? ac.map(([r, a]) => `<span class="big">${esc(r)} · ${a.temperature}°C</span><span class="small">${esc(a.mode)}</span>`).join("") : `<span class="big" style="color:var(--faint)">off</span>`);
+  h += tile("doors", "Doors", doors);
+  h += tile("last", "Last action", last ? `<span class="big">${esc(last)}</span>` : `<span class="small">nothing yet</span>`, true);
+  $("home").innerHTML = h;
+  if (flash.length) setTimeout(() => { document.querySelectorAll(".tile.flash").forEach(t => t.classList.remove("flash")); flash = []; }, 1200);
+}
 
 /* ---------- requests ---------- */
 async function call(params) {
   if (ctrl) ctrl.abort();
-  ctrl = new AbortController();
-  const my = ++seq;
-  setStatus("busy");
+  ctrl = new AbortController(); const my = ++seq; setStatus("busy");
   try {
     const r = await fetch("/api/parse?" + new URLSearchParams(params), {signal: ctrl.signal});
     if (!r.ok) throw new Error("HTTP " + r.status);
-    const d = await r.json();
-    if (my !== seq) return;
+    const d = await r.json(); if (my !== seq) return;
     render(d); setStatus("");
-  } catch (e) {
-    if (e.name === "AbortError") return;
-    setStatus("err", "local model server not reachable");
-  }
+  } catch (e) { if (e.name !== "AbortError") setStatus("err", "local model server not reachable"); }
 }
 function run() {
-  const text = box.value.trim();
-  if (!text) return;
-  if (pending) {
-    call({q: text, tool: pending.tool, prev: JSON.stringify(pending.args), field: pending.field});
-  } else {
-    lastQuery = text;
-    call({q: text});
-  }
+  const text = box.value.trim(); if (!text) return;
+  if (pending) call({q: text, tool: pending.tool, prev: JSON.stringify(pending.args), field: pending.field});
+  else { lastQuery = text; call({q: text}); }
 }
-function answer(text) { box.value = text; grow(); run(); }
+function runText(t) { clearPending(); box.value = t; grow(); run(); }
+function answer(t) { box.value = t; grow(); run(); }
 function chooseTool(tool) { clearPending(); box.value = lastQuery; grow(); call({q: lastQuery, tool}); }
-
-function setStatus(kind, msg) {
-  status.className = "status " + kind;
-  statusText.textContent = msg || (kind === "busy" ? "embedding on CPU…" : "running locally on CPU · offline");
-}
-
-/* ---------- home ---------- */
-const FLASH = {set_light: "lights", set_ac: "ac", set_timer: "timer", play_music: "music", send_message: "message",
-               set_reminder: "reminders", lock_door: "doors", order_food: "order"};
-function flashFor(tool) { return [FLASH[tool]]; }
-function tile(key, title, body, wide) {
-  return `<div class="tile ${wide ? "wide" : ""} ${flashKeys.includes(key) ? "flash" : ""}" data-k="${key}"><h3>${title}</h3>${body}</div>`;
-}
-const none = t => `<span class="small none">${t}</span>`;
-function renderHome(s) {
-  if (!s) return;
-  state = s;
-  const L = Object.entries(s.lights).map(([room, l]) =>
-    `<div class="bulb ${l.on ? "on" : ""}"><i style="${l.on ? `opacity:${0.35 + 0.65 * l.brightness / 100}` : ""}"></i>${esc(room)}<span class="small">${l.on ? l.brightness + "%" : "off"}</span></div>`).join("");
-  const ac = Object.entries(s.ac);
-  const tm = s.timer;
-  let h = tile("lights", "Lights", `<div class="lights">${L}</div>`, true);
-  h += tile("ac", "AC", ac.length ? ac.map(([r, a]) => `<span class="big">${esc(r)} · ${a.temperature}°C</span><span class="small">${esc(a.mode)} mode</span>`).join("") : none("off everywhere"));
-  h += tile("doors", "Doors", `<div class="doors">${Object.entries(s.doors).map(([d, l]) => `<span>${esc(d)} <span class="${l ? "lk" : "ul"}">${l ? "locked" : "unlocked"}</span></span>`).join("")}</div>`);
-  h += tile("timer", "Timer", tm ? `<span class="big" id="timerLeft"></span><span class="small">${tm.minutes} min${tm.label ? " · " + esc(tm.label) : ""}</span>` : none("no timer"));
-  h += tile("music", "Now playing", s.music ? `<span class="big">${esc(s.music.genre)}</span><span class="small">volume ${s.music.volume}</span>` : none("nothing"));
-  h += tile("message", "Last message", s.message ? `<span class="big">to ${esc(s.message.contact)}</span><span class="small">“${esc(s.message.text)}” · ${s.message.at}</span>` : none("none sent"), true);
-  h += tile("reminders", "Reminders", s.reminders.length ? s.reminders.map(r => `<span class="small"><b style="color:var(--ink);font-weight:500">${r.time}</b> ${esc(r.text)}</span>`).join("") : none("none"));
-  h += tile("order", "Food order", s.order ? `<span class="big">${s.order.quantity} × ${esc(s.order.dish)}</span><span class="small">on the way · ${s.order.at}</span>` : none("nothing ordered"));
-  h += tile("log", "Executed calls", s.log.length ? `<div class="calllog">${s.log.slice(0, 4).map(l => `<span>${esc(l.code)}</span>`).join("")}</div>` : none("none yet"), true);
-  $("home").innerHTML = h;
-  tickTimer();
-  if (flashKeys.length) setTimeout(() => { document.querySelectorAll(".tile.flash").forEach(t => t.classList.remove("flash")); flashKeys = []; }, 900);
-}
-function tickTimer() {
-  const el = $("timerLeft");
-  if (!el || !state || !state.timer) return;
-  const left = Math.max(0, Math.round(state.timer.ends_at - Date.now() / 1000));
-  el.textContent = left ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")} left` : "done";
-}
-setInterval(tickTimer, 1000);
-
-/* ---------- schemas ---------- */
-function sigHtml(t) {
-  const ps = t.params.map(p => `<span class="pn">${esc(p.name)}</span>: ${esc(p.type)}${p.required ? "" : ' <span class="opt">= None</span>'}`);
-  return `<div class="sig"><code><span class="fn">${esc(t.name)}</span>(${ps.join(", ")})</code><span class="d">${esc(t.description)}</span></div>`;
-}
-function setTypes(open) {
-  document.body.classList.toggle("types-closed", !open);
-  $("typesBtn").setAttribute("aria-expanded", open);
-}
-$("typesBtn").addEventListener("click", () => setTypes(document.body.classList.contains("types-closed")));
+function setStatus(kind, msg) { $("status").className = "status " + kind; $("statusText").textContent = msg || (kind === "busy" ? "embedding on CPU…" : "running locally on CPU · offline"); }
 
 /* ---------- keys ---------- */
-box.addEventListener("keydown", e => {
-  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); run(); }
-});
+// Grow the input with long commands (e.g. Malayalam sentences) instead of scrolling inside it.
+function grow() { box.style.height = 'auto'; box.style.height = box.scrollHeight + 4 + 'px'; }
+box.addEventListener('input', grow);
+$("go").onclick = run;
+box.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); run(); } });
 document.addEventListener("keydown", e => {
-  if (e.altKey && /^[0-9]$/.test(e.key)) { e.preventDefault(); runText(EXAMPLES[(+e.key + 9) % 10][0], true); }
-  else if (e.altKey && (e.key === "t" || e.key === "T")) { e.preventDefault(); $("typesBtn").click(); }
-  else if (e.key === "Escape") { clearPending(); box.value = ""; grow(); box.focus(); }
+  if (!document.body.classList.contains("started")) {
+    if (["Enter", "ArrowRight", " "].includes(e.key)) { e.preventDefault(); start(); }
+    return;
+  }
+  if ((e.key === "t" || e.key === "T") && document.activeElement !== box) { e.preventDefault(); showTools(); return; }
+  if (e.altKey && /^[1-6]$/.test(e.key)) { e.preventDefault(); runText(EXAMPLES[+e.key - 1]); }
+  else if (e.key === "Escape") { clearPending(); document.body.classList.remove("details"); box.value = ""; box.focus(); }
+  else if ((e.key === "d" || e.key === "D") && document.activeElement !== box) { e.preventDefault(); document.body.classList.toggle("details"); }
+  else if (e.altKey && (e.key === "d" || e.key === "D")) { e.preventDefault(); document.body.classList.toggle("details"); }
   else if (e.key === "/" && document.activeElement !== box) { e.preventDefault(); box.focus(); }
 });
-$("cancelPending").addEventListener("click", () => { clearPending(); box.focus(); });
-$("reset").addEventListener("click", async () => { const r = await fetch("/api/reset"); renderHome(await r.json()); clearPending(); });
+$("cancelPending").onclick = () => { clearPending(); box.focus(); };
+$("reset").onclick = async () => { const r = await fetch("/api/reset"); lastEffect = null; renderHome(await r.json()); clearPending(); };
 
-const params = new URLSearchParams(location.search);
-if (params.get("types") === "0" || (!params.has("types") && innerWidth < 1180)) setTypes(false);
 fetch("/api/info").then(r => r.json()).then(i => {
-  $("sigs").innerHTML = i.tools.map(sigHtml).join("");
-  $("foot").textContent = `One ${i.dims}-D embedding per message, compared with ${i.tools.length} tool prototypes (description + ${i.examples} example utterances). Confident when top score ≥ ${i.min_score} and ≥ ${i.min_gap} ahead of #2. Enum fallback by meaning only when one value leads by ≥ ${i.enum_gap}. Model ${i.model} loaded in ${i.load_s} s. Nothing leaves this laptop.`;
+  renderTools(i.tools);
+  $("dSigs").innerHTML = i.tools.map(t => `<div class="sig">${esc(t.name)}(${t.params.map(p => esc(p.name) + ": " + esc(p.type) + (p.required ? "" : " = None")).join(", ")})</div>`).join("");
+  $("dFoot").textContent = `One ${i.dims}-D embedding per message, compared with ${i.tools.length} action prototypes (description + ${i.examples} example phrases). Confident when the top score is ≥ ${i.min_score} and ≥ ${i.min_gap} ahead of #2. Model ${i.model}, loaded in ${i.load_s} s. Nothing leaves this laptop.`;
 }).catch(() => {});
 fetch("/api/state").then(r => r.json()).then(s => { if (!state) renderHome(s); }).catch(() => setStatus("err", "local model server not reachable"));
-const pre = params.get("q");
-if (pre) runText(pre, true);
+const pre = new URLSearchParams(location.search);
+if (pre.get("intro") === "0" || pre.get("q")) document.body.classList.add("started");
+if (pre.get("q")) runText(pre.get("q"));
+if (pre.get("details") === "1") document.body.classList.add("details");
 </script>
 </body>
 </html>
