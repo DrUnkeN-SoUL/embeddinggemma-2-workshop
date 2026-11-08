@@ -75,23 +75,60 @@ body.details #details{transform:none}
 #details .sig{font:13px/1.55 var(--mono);color:#cfe0ff;margin-bottom:8px}
 #details p{font-size:13.5px;line-height:1.55;color:var(--faint);margin:0}
 
-/* Step 1: the 8 actions, full screen, before the live demo */
-#intro{position:fixed;inset:0;background:radial-gradient(ellipse at 80% 90%,#0d1d36,#05070a 60%);padding:44px 56px;display:flex;flex-direction:column;z-index:5;overflow:auto}
+/* Intro for a dev audience: 3 steps, → / ← */
+#intro{position:fixed;inset:0;background:radial-gradient(ellipse at 80% 90%,#0d1d36,#05070a 60%);padding:40px 56px 30px;display:flex;flex-direction:column;z-index:5;overflow:auto}
 body.started #intro{display:none}
-#intro h1{font-size:50px}
-#intro .sub{font-size:21px;max-width:1100px}
-.toolgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:30px}
-.tcard{background:var(--surface);border-radius:16px;padding:20px 22px}
-.tcard .nm{display:flex;align-items:center;gap:10px;font-size:24px;font-weight:500}
-.tcard .ic{font-size:26px}
-.tcard .what{font-size:16px;color:var(--muted);margin-top:6px}
-.tcard .params{margin:14px 0 0;padding:0;list-style:none;display:grid;gap:6px}
-.tcard .params li{font-size:15.5px;color:#dfe3e8}
-.tcard .params b{font:600 14px var(--mono);color:var(--blue);margin-right:6px}
-.tcard .params small{color:var(--faint);margin-left:4px}
-.tcard .ex{margin-top:14px;font-size:15.5px;color:var(--green)}
-.introfoot{margin-top:auto;padding-top:24px;display:flex;align-items:center;gap:18px;font-size:18px;color:var(--muted)}
-.introfoot button{background:#1d4ea8;border-radius:12px;padding:14px 26px;font-size:20px;color:#fff}
+#intro h1{font-size:46px}
+#intro .sub{font-size:20px;max-width:1250px}
+.step{display:none;flex-direction:column;flex:1;min-height:0}
+.step.on{display:flex}
+.code{font:15px/1.6 var(--mono);color:#dfe3e8;white-space:pre-wrap;word-break:break-word}
+.code .kw{color:#c792ea}.code .fn{color:var(--blue)}.code .ty{color:#7fd6c9}.code .s{color:var(--green)}.code .n{color:var(--yellow)}.code .c{color:var(--faint)}.code .k{color:#ffb38a}
+.aliases{margin-top:22px;background:var(--surface);border-radius:14px;padding:14px 20px;font-size:17px}
+.toolgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px}
+.tcard{background:var(--surface);border-radius:14px;padding:18px 20px}
+.tcard .code{font-size:16.5px;line-height:1.55}
+.tcard .ex{margin-top:12px;font-size:16px;color:var(--muted)}
+.tcard .ex b{color:var(--green);font-weight:500}
+.deep{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:26px}
+.panel{background:var(--surface);border-radius:16px;padding:20px 24px}
+.panel h3{margin:0 0 12px;font-size:16px;font-weight:600;color:var(--muted)}
+.panel .code{font-size:17px}
+.panel ul{margin:0;padding-left:20px;font-size:17px;line-height:1.6;color:#dfe3e8}
+.flow{display:grid;gap:22px;margin-top:40px}
+.lane{display:flex;align-items:stretch;gap:10px}
+.lane .tag{width:130px;flex:none;align-self:center;font-size:21px;color:var(--muted)}
+.node{background:var(--surface);border-radius:14px;padding:20px 24px;font-size:23px;line-height:1.35;flex:1}
+.node b{display:block;font-weight:500;color:var(--ink)}
+.node small{display:block;color:var(--muted);font-size:17.5px;margin-top:6px}
+.node.m{background:#13233d}.node.v{background:#2a1f3d}.node.ok{background:#14301f}
+.arrow{align-self:center;color:var(--faint);font-size:26px}
+.lane.off{opacity:.35}
+.introfoot{margin-top:auto;padding-top:22px;display:flex;align-items:center;gap:18px;font-size:17px;color:var(--muted)}
+.introfoot button{background:#1d4ea8;border-radius:12px;padding:13px 24px;font-size:19px;color:#fff}
+.dots{display:flex;gap:8px;margin-left:auto}.dots i{width:10px;height:10px;border-radius:50%;background:#2a3343}.dots i.on{background:var(--blue)}
+/* voice */
+.vbtn{display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:999px;padding:10px 18px;font-size:16px;color:var(--muted);white-space:nowrap}
+.vbtn.on{background:#2a1f3d;color:#fff;box-shadow:0 0 0 2px #a78bfa inset}
+.vbtn.na{opacity:.6}
+.hd-right{display:flex;gap:10px;align-items:flex-start}
+#mic{display:none;background:#3b2a5c;border-radius:var(--radius);padding:0 22px;font-size:26px}
+body.voice #mic{display:block}
+#mic.rec{background:#b3261e;animation:pulse 1.2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 8px #b3261e44}}
+.listen{display:flex;align-items:center;gap:22px}
+.meter{display:flex;align-items:center;gap:5px;height:70px}
+.meter i{width:9px;border-radius:5px;background:#a78bfa;height:6px;transition:height .08s}
+.listen .lt{font-size:30px}
+.listen .ls{font-size:17px;color:var(--muted);margin-top:6px}
+.heard{margin-bottom:20px;display:grid;gap:10px}
+.heard small{font-size:15px;color:var(--faint)}
+.heard div{font-size:21px;color:var(--muted)}
+.heard q{color:var(--ink);font-size:27px;quotes:"“" "”"}
+.heard .agree{color:var(--green)}.heard .differ{color:var(--yellow)}
+.chip .snd{margin-left:auto;font-size:13px;color:#cbb8ff;display:none}
+.chip.sound .snd{display:inline}
+.chip.sound:not(.ok):not(.clarify){box-shadow:0 0 0 2px #a78bfa inset;color:#fff}
 /* Step 2: the same 8 actions as a strip; the chosen one lights up */
 .strip h2,.home h2{margin:0 0 12px;font-size:16px;font-weight:600;color:var(--muted)}
 .strip{margin-bottom:24px}
@@ -107,29 +144,48 @@ body.started #intro{display:none}
 </style>
 </head>
 <body>
-<section id="intro" aria-label="What this assistant can do">
-  <h1>This assistant can only do 8 things</h1>
-  <p class="sub">Each action has typed values: a fixed list of choices, a number range, or text. Whatever you say, the model picks one of these 8 by meaning, and every value is checked before anything runs.</p>
-  <div class="toolgrid" id="toolgrid"></div>
-  <div class="introfoot"><button id="start">Try it →</button><span>Press <b>Enter</b> or <b>→</b> to start · <b>T</b> brings this back</span></div>
+<section id="intro" aria-label="How the assistant works">
+  <div class="step on" data-step="0">
+    <h1>8 typed tools. Nothing else can run.</h1>
+    <p class="sub">This is the whole tool table. The model never writes these values: it only ranks the tools by meaning. Rules fill the arguments, and a validator rejects anything outside the types below.</p>
+    <div class="aliases code" id="aliases"></div>
+    <div class="toolgrid" id="toolgrid"></div>
+  </div>
+  <div class="step" data-step="1">
+    <h1>One tool, three views</h1>
+    <p class="sub">The JSON Schema is what you would hand an LLM tool API. Here no LLM reads it: the schema is enforced in code, and the examples become one vector per tool.</p>
+    <div class="deep">
+      <div class="panel"><h3>JSON Schema (function-calling format)</h3><div class="code" id="deepSchema"></div></div>
+      <div style="display:grid;gap:22px;align-content:start">
+        <div class="panel"><h3>Tool prototype = one 768-D vector</h3><div class="code" id="deepProto"></div></div>
+        <div class="panel"><h3>Validator: the only gate to execute()</h3><ul id="deepRules"></ul></div>
+      </div>
+    </div>
+  </div>
+  <div class="step" data-step="2">
+    <h1>Per message: one embedding, then plain code</h1>
+    <p class="sub">Text and voice land in the same 768-D space, so the same 8 prototypes work for both.</p>
+    <div class="flow" id="flow"></div>
+  </div>
+  <div class="introfoot"><button id="start">Try it →</button><span><b>→</b> next · <b>←</b> back · <b>Enter</b> skip to the demo · <b>T</b> brings this back</span><div class="dots" id="dots"><i class="on"></i><i></i><i></i></div></div>
 </section>
 <header>
   <div><h1>Say it. Get a typed call.</h1><p class="sub">EmbeddingGemma 2 picks the action by meaning, then every value is checked against its type. Nothing invalid ever runs.</p></div>
-  <div class="status" id="status"><i></i><span id="statusText">running locally on CPU · offline</span></div>
+  <div class="hd-right"><button class="vbtn" id="vbtn" aria-pressed="false">🎙 <span id="vtext">Voice off</span></button><div class="status" id="status"><i></i><span id="statusText">running locally on CPU · offline</span></div></div>
 </header>
 <main>
   <section>
-    <div class="ask"><textarea id="box" rows="1" placeholder="Tell the house what to do…" aria-label="Command" autofocus></textarea><button id="go" aria-label="Run">Run</button></div>
+    <div class="ask"><textarea id="box" rows="1" placeholder="Tell the house what to do…" aria-label="Command" autofocus></textarea><button id="mic" aria-label="Speak">🎙</button><button id="go" aria-label="Run">Run</button></div>
     <div class="pending" id="pending"><span id="pendingText"></span><button id="cancelPending">cancel</button></div>
     <div class="examples" id="examples"></div>
     <div class="card" id="card"><p class="empty">Type a command, or pick an example above.<br>The answer is always a valid call, a question, or “not sure”.</p></div>
   </section>
   <section class="home"><div class="strip"><h2>It picks one of these 8 actions</h2><div class="chips" id="chips"></div></div><h2>The house</h2><div class="tiles" id="home"></div></section>
 </main>
-<div class="foot"><span><kbd>Enter</kbd> run · <kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>6</kbd> examples · <kbd>Esc</kbd> clear · <kbd>T</kbd> the 8 actions · <kbd>D</kbd> details</span><button id="reset">Reset the house</button></div>
+<div class="foot"><span><kbd>Enter</kbd> run · <kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>6</kbd> examples · <kbd>Esc</kbd> clear · <kbd>T</kbd> intro · <kbd>D</kbd> details · <kbd>V</kbd> voice on/off · voice on: <kbd>Enter</kbd> on an empty box or <kbd>Alt</kbd>+<kbd>V</kbd> talks · <kbd>L</kbd> English/Malayalam</span><button id="reset">Reset the house</button></div>
 
 <aside id="details" aria-label="Details">
-  <div><h4>Typed call as JSON</h4><pre id="dJson">—</pre><h4>How each value was filled</h4><table id="dTrace"></table><h4>Action scores (cosine similarity)</h4><table id="dRank"></table><p id="dFoot"></p></div>
+  <div><h4>Typed call as JSON</h4><pre id="dJson">—</pre><h4>How each value was filled</h4><table id="dTrace"></table><h4>Action scores (cosine similarity)</h4><table id="dRank"></table><div id="dVoiceWrap" hidden><h4>From the sound alone (audio encoder, no words)</h4><table id="dVoice"></table></div><p id="dFoot"></p></div>
   <div><h4>The only 8 actions it can take</h4><div id="dSigs"></div></div>
 </aside>
 
@@ -142,31 +198,97 @@ const NAMES = {set_light: "Lights", set_ac: "AC", set_timer: "Timer", play_music
 const EXAMPLES = ["set the bedroom AC to 22 in cool mode", "bedroom light off aakku", "അമ്മയ്ക്ക് മെസ്സേജ് അയക്കൂ ഞാൻ വൈകും",
                   "set AC to 40", "turn on the light", "what's the weather in Kochi"];
 const ICON = {set_light: "💡", set_ac: "❄️", set_timer: "⏲️", play_music: "🎵", send_message: "💬", set_reminder: "⏰", lock_door: "🔒", order_food: "🍛"};
-const SAY = {set_light: "“turn off the bedroom light”", set_ac: "“bedroom AC to 22, cool”", set_timer: "“timer for 10 minutes”", play_music: "“play some melody”",
-             send_message: "“tell Amma I’ll be late”", set_reminder: "“remind me at 7:30 pm to call Achan”", lock_door: "“lock the back door”", order_food: "“order 2 biryani”"};
-// Turn schema types into plain words: "a" | "b" → a / b, int[16..30] → 16–30, str → any text, bool → on / off.
-function plain(type) {
-  if (type.includes('|')) return [...type.matchAll(/"([^"]+)"/g)].map(m => m[1]).join(' / ');
-  const r = type.match(/int\[(\d+)\.\.(\d+)\]/); if (r) return `number ${r[1]}–${r[2]}`;
-  return ({str: 'any text', bool: 'on / off', '"HH:MM"': 'time, e.g. 19:30'})[type] || type;
+let INFO = null, VOICE = null;
+let pending = null, lastQuery = "", state = null, flash = [], ctrl = null, seq = 0, lastEffect = null;
+
+/* ---------- intro: the tool table as code ---------- */
+const span = (c, t) => `<span class="${c}">${t}</span>`;
+const lit = vals => `${span("ty", "Literal")}[${vals.map(v => span("s", esc(JSON.stringify(v)))).join(", ")}]`;
+const enumVals = type => [...type.matchAll(/"([^"]+)"/g)].map(m => m[1]);
+let ALIASES = {};   // enum type string used by 2+ tools -> alias name (Room)
+function pyType(p) {
+  if (ALIASES[p.type]) return [span("ty", ALIASES[p.type]), ""];
+  if (p.type.includes("|")) return [lit(enumVals(p.type)), ""];
+  const r = p.type.match(/int\[(\d+)\.\.(\d+)\]/);
+  if (r) return [span("ty", "int"), `${r[1]}–${r[2]}`];
+  if (p.type === '"HH:MM"') return [span("ty", "str"), '"HH:MM", 24 h'];
+  return [span("ty", p.type), ""];
 }
-function renderTools(tools) {
-  $("toolgrid").innerHTML = tools.map(t => `<div class="tcard"><div class="nm"><span class="ic">${ICON[t.name] || "•"}</span>${esc(NAMES[t.name] || t.name)}</div>
-    <div class="what">${esc(t.description)}</div>
-    <ul class="params">${t.params.map(p => `<li><b>${esc(p.name)}</b>${esc(plain(p.type))}${p.required ? "" : "<small>(optional)</small>"}</li>`).join("")}</ul>
-    <div class="ex">${SAY[t.name] || ""}</div></div>`).join("");
-  $("chips").innerHTML = tools.map(t => `<div class="chip" data-t="${t.name}"><span class="ic">${ICON[t.name] || "•"}</span>${esc(NAMES[t.name] || t.name)}</div>`).join("");
-}
-function lightChips(d) {
-  document.querySelectorAll(".chip").forEach(c => {
-    const t = c.dataset.t;
-    c.className = "chip" + (d.status === "ok" && t === d.tool ? " ok" : d.status === "clarify" && t === d.tool ? " clarify" : d.status === "unsure" && d.options.includes(t) ? " maybe" : "");
+function pySig(t) {
+  const lines = t.params.map(p => {
+    const [ty, note] = pyType(p);
+    const opt = p.required ? "" : ` | ${span("kw", "None")} = ${span("kw", "None")}`;
+    return `    ${esc(p.name)}: ${ty}${opt},${note ? "  " + span("c", "# " + esc(note)) : ""}`;
   });
+  return `${span("kw", "def")} ${span("fn", t.name)}(\n${lines.join("\n")}\n):\n    ${span("c", '"""' + esc(t.description) + '"""')}`;
+}
+function hlJson(o) {
+  // Pretty JSON with arrays on one line, so a whole schema fits on a projector slide.
+  const pretty = (v, ind) => Array.isArray(v) ? "[" + v.map(x => JSON.stringify(x)).join(", ") + "]"
+    : v && typeof v === "object" ? "{\n" + Object.entries(v).map(([k, x]) => ind + "  " + JSON.stringify(k) + ": " + pretty(x, ind + "  ")).join(",\n") + "\n" + ind + "}"
+    : JSON.stringify(v);
+  return esc(pretty(o, ""))
+    .replace(/(&quot;[^&]*?&quot;)(\s*:)/g, (m, k, c) => span("k", k) + c)
+    .replace(/: (&quot;.*?&quot;)/g, (m, v) => ": " + span("s", v))
+    .replace(/(\[|, |\n\s+)(&quot;[^&]*?&quot;)(?=[,\]\n])/g, (m, pre, v) => pre + span("s", v))
+    .replace(/: (-?\d+)/g, (m, n) => ": " + span("n", n))
+    .replace(/: (true|false)/g, (m, b) => ": " + span("kw", b));
+}
+function renderIntro(i) {
+  const tools = i.tools, count = {};
+  tools.forEach(t => t.params.forEach(p => { if (p.type.includes("|")) count[p.type] = (count[p.type] || 0) + 1; }));
+  ALIASES = {};
+  tools.forEach(t => t.params.forEach(p => { if (count[p.type] > 1) ALIASES[p.type] = p.name[0].toUpperCase() + p.name.slice(1); }));
+  $("aliases").innerHTML = Object.entries(ALIASES).map(([ty, nm]) => `${span("ty", nm)} = ${lit(enumVals(ty))}  ${span("c", "# shared by " + count[ty] + " tools")}`).join("\n")
+    + `\n${span("c", "# Every call is checked against these types before execute(). Missing or out of range → a question, never a guess.")}`;
+  $("toolgrid").innerHTML = tools.map(t => `<div class="tcard"><div class="code">${pySig(t)}</div>
+    <div class="ex">${t.examples.length} example phrases, e.g. <b>“${esc(t.examples[0])}”</b></div></div>`).join("");
+  // deep dive: set_ac
+  const t = tools.find(x => x.name === "set_ac") || tools[0];
+  $("deepSchema").innerHTML = hlJson(t.schema);
+  const ex = t.examples.slice(0, 3).map(e => "    " + span("s", esc(JSON.stringify(e))) + ",").join("\n");
+  $("deepProto").innerHTML = `examples = [\n${ex}\n    ${span("c", `# … ${t.examples.length} in all, some Manglish and Malayalam`)}\n]\n`
+    + `v = ${span("fn", "mean")}(${span("fn", "embed")}(${span("s", JSON.stringify(i.prefix))} + e) ${span("kw", "for")} e ${span("kw", "in")} examples)\n`
+    + `proto = ${span("fn", "normalize")}(${span("fn", "normalize")}(v) + ${span("n", i.desc_weight)} * ${span("fn", "embed")}(description))\n`
+    + `${span("c", `# at run time: scores = protos @ embed(message)   (8 × ${i.dims} dot products)`)}`;
+  $("deepRules").innerHTML = t.params.map(p => {
+    const r = p.type.match(/int\[(\d+)\.\.(\d+)\]/);
+    const rule = p.type.includes("|") ? `one of ${enumVals(p.type).length} values` : r ? `an int from ${r[1]} to ${r[2]}` : p.type;
+    return `<li><span class="mono">${esc(p.name)}</span> must be ${esc(rule)}${p.required ? `; if missing it asks <i>“${esc(p.ask)}”</i>` : "; optional, left out if not said"}</li>`;
+  }).join("") + `<li>“set AC to 40” → <i>“Temperature must be between 16 and 30; you said 40.”</i> Nothing runs.</li><li>Zero issues is the only path to <span class="mono">execute()</span>.</li>`;
+  renderFlow();
+}
+function renderFlow() {
+  if (!INFO) return;
+  const i = INFO, v = VOICE && VOICE.ok ? VOICE : null, off = v ? "" : " off";
+  const n = (cls, b, sm) => `<div class="node ${cls}"><b>${b}</b>${sm ? `<small>${sm}</small>` : ""}</div>`, ar = `<span class="arrow">→</span>`;
+  $("flow").innerHTML =
+    `<div class="lane"><span class="tag">⌨️ Text</span>${n("", "Your words", "English, Manglish, Malayalam")}${ar}${n("m", "EmbeddingGemma 2 text", "LiteRT-LM int8, 165 MB, ~85 ms on CPU")}${ar}${n("m", `${i.dims}-D vector · cosine vs ${i.tools.length} prototypes`, `confident if top ≥ ${i.min_score} and ≥ ${i.min_gap} ahead of #2`)}</div>`
+    + `<div class="lane${off}"><span class="tag">🎙 Sound</span>${n("", "Your voice", "16 kHz mono, no words")}${ar}${n("v", "EmbeddingGemma 2 audio encoder", "300M, PyTorch CPU, ~0.55 s")}${ar}${n("v", "Same 768-D space · same 8 tools", v ? `confident if top ≥ ${v.min_score} and ≥ ${v.min_gap} ahead · picks the action` : "voice server off")}</div>`
+    + `<div class="lane${off}"><span class="tag">🎙 Words</span>${n("", "Your voice", "the same clip")}${ar}${n("v", "Whisper " + (v ? v.whisper : "base"), "int8, ~0.6 s, vocabulary hint for Amma / Achan / sadya")}${ar}${n("", "Transcript joins the text lane", "it supplies the values: 22, bedroom, cool")}</div>`
+    + `<div class="lane"><span class="tag">Then</span>${n("", "Fill arguments", `regex for numbers and times · EN/Manglish/ML lexicon · enum by embedding (lead ≥ ${i.enum_gap})`)}${ar}${n("", "Validate against the schema", "type, range, enum, required")}${ar}${n("ok", "✅ run · ❓ ask · 🤷 not sure", "never an invalid call")}</div>`;
+}
+let step = 0;
+function goStep(k) {
+  step = Math.max(0, Math.min(2, k));
+  document.querySelectorAll(".step").forEach(el => el.classList.toggle("on", +el.dataset.step === step));
+  document.querySelectorAll("#dots i").forEach((d, j) => d.classList.toggle("on", j === step));
+  $("start").textContent = step < 2 ? "Next →" : "Try it →";
 }
 function start() { document.body.classList.add("started"); box.focus(); }
-function showTools() { document.body.classList.remove("started"); $("start").focus(); }
-$("start").onclick = start;
-let pending = null, lastQuery = "", state = null, flash = [], ctrl = null, seq = 0, lastEffect = null;
+function showIntro() { document.body.classList.remove("started"); goStep(0); $("start").focus(); }
+$("start").onclick = () => step < 2 ? goStep(step + 1) : start();
+function renderChips(tools) {
+  $("chips").innerHTML = tools.map(t => `<div class="chip" data-t="${t.name}"><span class="ic">${ICON[t.name] || "•"}</span>${esc(NAMES[t.name] || t.name)}<span class="snd">🎧 sound</span></div>`).join("");
+}
+function lightChips(d) {
+  const snd = d.voice && d.voice.sound.confident ? d.voice.sound.ranked[0].tool : null;
+  document.querySelectorAll(".chip").forEach(c => {
+    const t = c.dataset.t;
+    c.className = "chip" + (d.status === "ok" && t === d.tool ? " ok" : d.status === "clarify" && t === d.tool ? " clarify" : d.status === "unsure" && (d.options || []).includes(t) ? " maybe" : "")
+      + (t === snd ? " sound" : "");
+  });
+}
 
 $("examples").innerHTML = EXAMPLES.map((t, i) => `<button data-i="${i}"><kbd>${i + 1}</kbd>${esc(t)}</button>`).join("");
 $("examples").addEventListener("click", e => { const b = e.target.closest("button"); if (b) runText(EXAMPLES[+b.dataset.i]); });
@@ -182,11 +304,24 @@ function meta(d) {
   const ms = d.cached ? "" : ` · ${Math.round(d.ms.total)} ms on this CPU`;
   return d.tool && d.score != null ? `Picked <b>${esc(NAMES[d.tool] || d.tool)}</b> by meaning (score ${d.score.toFixed(2)})${ms}` : (ms ? ms.slice(3) : "");
 }
+function heardHtml(v) {
+  if (!v) return "";
+  const top = v.sound.ranked[0], name = NAMES[top.tool] || top.tool;
+  const snd = !v.sound.confident ? `<span class="differ">not confident</span> (best ${esc(name)} ${top.score.toFixed(2)}, ${esc(v.sound.reason)})`
+    : v.used === "sound" ? `<b>${esc(name)}</b> ${top.score.toFixed(2)} · <span class="agree">the words alone were unsure, so the sound picked the action</span>`
+    : v.agree ? `<b>${esc(name)}</b> ${top.score.toFixed(2)} · <span class="agree">agrees ✓</span>`
+    : `<b>${esc(name)}</b> ${top.score.toFixed(2)} · <span class="differ">differs from the words</span>`;
+  return `<div class="heard"><div>🎙 Heard <q>${esc(v.transcript || "…")}</q> <small>Whisper, ${v.stt_ms} ms</small></div>`
+    + `<div>🎧 From the sound alone, no words: ${snd} <small>${v.sound_ms} ms</small></div></div>`;
+}
 function render(d) {
-  let h = "";
-  if (d.status === "ok") {
+  let h = heardHtml(d.voice);
+  if (d.status === "unheard") {
+    card.className = "card unsure";
+    h += `<div class="verdict">🙉 Didn’t catch any words, nothing ran</div><p class="question">Try again a little closer to the mic.</p>`;
+  } else if (d.status === "ok") {
     card.className = "card ok";
-    h = `<div class="verdict">✅ Valid call, it ran</div><div class="call">${callHtml(d.tool, d.args)}</div>`
+    h += `<div class="verdict">✅ Valid call, it ran</div><div class="call">${callHtml(d.tool, d.args)}</div>`
       + (d.effect ? `<div class="done">${esc(d.effect)}</div>` : "") + `<div class="meta">${meta(d)}</div>`;
     lastEffect = d.effect;
   } else if (d.status === "clarify") {
@@ -194,21 +329,22 @@ function render(d) {
     const bad = d.issues.filter(i => i.kind !== "missing").map(i => i.field);
     const missing = d.issues.filter(i => i.kind === "missing").map(i => i.field).filter(f => !bad.includes(f));
     const shown = Object.fromEntries(Object.entries(d.args).filter(([k]) => !bad.includes(k)));
-    h = `<div class="verdict">❓ Needs one more thing, nothing ran</div><p class="question">${esc(d.question)}</p>`
+    h += `<div class="verdict">❓ Needs one more thing, nothing ran</div><p class="question">${esc(d.question)}</p>`
       + (d.options.length ? `<div class="opts">${d.options.map(o => `<button data-answer="${esc(o)}">${esc(o)}</button>`).join("")}</div>` : "")
       + `<div class="partial">${callHtml(d.tool, shown, [...bad, ...missing])}</div><div class="meta">${meta(d)}</div>`;
   } else {
     card.className = "card unsure";
-    h = `<div class="verdict">🤷 Not sure what you want, nothing ran</div><p class="question">Did you mean…</p>`
+    h += `<div class="verdict">🤷 Not sure what you want, nothing ran</div><p class="question">Did you mean…</p>`
       + `<div class="opts">${d.options.map(o => `<button data-tool="${esc(o)}">${esc(NAMES[o] || o)}</button>`).join("")}</div>`
       + `<div class="meta">None of the 8 actions is a confident match.</div>`;
   }
   card.innerHTML = h;
   card.querySelectorAll("[data-answer]").forEach(b => b.onclick = () => answer(b.dataset.answer));
   card.querySelectorAll("[data-tool]").forEach(b => b.onclick = () => chooseTool(b.dataset.tool));
+  if (d.voice && d.voice.text) { box.value = d.voice.text; grow(); if (!pending) lastQuery = d.voice.text; }
   if (d.status === "clarify") {
     pending = {tool: d.tool, args: d.args, field: d.issues[0].field};
-    $("pendingText").textContent = `Answering ${NAMES[d.tool] || d.tool}: type the ${d.issues[0].field}, pick an option, or type a new command.`;
+    $("pendingText").textContent = `Answering ${NAMES[d.tool] || d.tool}: ${voiceOn ? "say" : "type"} the ${d.issues[0].field}, pick an option, or give a new command.`;
     $("pending").classList.add("on"); box.select();
   } else clearPending();
   if (d.status === "ok") flash = [TILE[d.tool] || "last", "last"];
@@ -220,6 +356,9 @@ function renderDetails(d) {
   $("dJson").textContent = d.json ? JSON.stringify(d.json, null, 2) : "No call yet: " + (d.status === "clarify" ? "waiting for an answer." : "action not chosen.");
   $("dTrace").innerHTML = (d.trace || []).map(t => `<tr><td>${esc(t.field)}</td><td>${esc(t.how)}</td><td>${esc(t.value)}</td></tr>`).join("") || "<tr><td>—</td></tr>";
   $("dRank").innerHTML = (d.ranked || []).slice(0, 4).map(r => `<tr><td>${esc(r.tool)}</td><td>${r.score.toFixed(3)}</td></tr>`).join("");
+  $("dVoiceWrap").hidden = !d.voice;
+  if (d.voice) $("dVoice").innerHTML = d.voice.sound.ranked.slice(0, 4).map(r => `<tr><td>${esc(r.tool)}</td><td>${r.score.toFixed(3)}</td></tr>`).join("")
+    + `<tr><td>${d.voice.sound.confident ? "confident" : "not confident"}</td><td>${esc(d.voice.sound.reason)}</td></tr><tr><td>clip</td><td>${d.voice.seconds} s · Whisper ${d.voice.stt_ms} ms · audio encoder ${d.voice.sound_ms} ms · language ${esc(d.voice.lang)}</td></tr>`;
 }
 function clearPending() { pending = null; $("pending").classList.remove("on"); }
 
@@ -252,7 +391,8 @@ async function call(params) {
   } catch (e) { if (e.name !== "AbortError") setStatus("err", "local model server not reachable"); }
 }
 function run() {
-  const text = box.value.trim(); if (!text) return;
+  const text = box.value.trim();
+  if (!text) { if (voiceOn) toggleListen(); return; }
   if (pending) call({q: text, tool: pending.tool, prev: JSON.stringify(pending.args), field: pending.field});
   else { lastQuery = text; call({q: text}); }
 }
@@ -261,37 +401,164 @@ function answer(t) { box.value = t; grow(); run(); }
 function chooseTool(tool) { clearPending(); box.value = lastQuery; grow(); call({q: lastQuery, tool}); }
 function setStatus(kind, msg) { $("status").className = "status " + kind; $("statusText").textContent = msg || (kind === "busy" ? "embedding on CPU…" : "running locally on CPU · offline"); }
 
+/* ---------- voice: a toggle, off by default; typing works the same either way ---------- */
+let voiceOn = false, lang = "en", rec = null, speaking = false;
+function voiceLabel() {
+  const b = $("vbtn");
+  b.classList.toggle("on", voiceOn); b.classList.toggle("na", !(VOICE && VOICE.ok));
+  b.setAttribute("aria-pressed", voiceOn);
+  $("vtext").textContent = !voiceOn ? "Voice off" : `Voice on · ${lang === "ml" ? "മലയാളം" : "English"}`;
+  if (!voiceOn && !(VOICE && VOICE.ok)) $("vtext").textContent = "Voice off (server not running)";
+}
+async function checkVoice() {
+  try { VOICE = await (await fetch("/api/voice")).json(); } catch { VOICE = {ok: false}; }
+  voiceLabel(); renderFlow();
+  return VOICE.ok;
+}
+async function toggleVoice() {
+  if (!voiceOn && !(await checkVoice())) {
+    voiceOn = false; voiceLabel();
+    $("vtext").textContent = "Voice server not running · typing still works";
+    return;
+  }
+  voiceOn = !voiceOn; document.body.classList.toggle("voice", voiceOn);
+  if (!voiceOn) { stopListen(true); speechSynthesis.cancel(); }
+  voiceLabel(); box.focus();
+}
+function say(text, then) {
+  if (!voiceOn || !("speechSynthesis" in window) || !text) { then && then(); return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text), vs = speechSynthesis.getVoices();
+  u.voice = vs.find(v => /en-IN/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang) && v.localService) || null;
+  u.rate = 1.05; speaking = true;
+  u.onend = u.onerror = () => { speaking = false; then && then(); };
+  speechSynthesis.speak(u);
+}
+function spoken(d) {
+  const nice = t => String(t).replace(/°C/g, " degrees").replace(/ min\b/g, " minutes").replace(/×/g, "").replace(/\s+/g, " ");
+  const list = q => q.replace(/\(([\d]+)–([\d]+)[^)]*\)/, "$1 to $2").replace(/ \/ ([^/]+)$/, " or $1").replace(/ \/ /g, ", ");
+  if (d.status === "ok") return "Done. " + nice(d.effect || "");
+  if (d.status === "clarify") return list(d.question);
+  if (d.status === "unheard") return "Sorry, I didn't catch that.";
+  return `Not sure. Did you mean ${NAMES[d.options[0]] || d.options[0]}, or ${NAMES[d.options[1]] || d.options[1]}?`;
+}
+function listenCard(title, sub) {
+  card.className = "card";
+  card.innerHTML = `<div class="listen"><div class="meter" id="meter">${"<i></i>".repeat(14)}</div><div><div class="lt">${title}</div><div class="ls">${sub}</div></div></div>`;
+}
+function toggleListen() { rec ? stopListen(false) : startListen(); }
+async function startListen() {
+  if (!voiceOn || rec) return;
+  speechSynthesis.cancel();
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({audio: {channelCount: 1, echoCancellation: true, noiseSuppression: true}}); }
+  catch (e) { listenCard("Microphone blocked", "Allow the mic for this page (lock icon in the address bar), then press Enter again."); return; }
+  const ac = new AudioContext(), src = ac.createMediaStreamSource(stream), node = ac.createScriptProcessor(2048, 1, 1);
+  rec = {stream, ac, src, node, chunks: [], rate: ac.sampleRate, t0: performance.now(), heard: false, lastLoud: 0, floor: 0.004, levels: Array(14).fill(6)};
+  $("mic").classList.add("rec");
+  listenCard("Listening…", `Speak now. It stops when you pause. ${lang === "ml" ? "Malayalam" : "English"} words, any language for the sound.`);
+  const bars = [...document.querySelectorAll("#meter i")];
+  node.onaudioprocess = e => {
+    if (!rec) return;
+    const x = e.inputBuffer.getChannelData(0); rec.chunks.push(new Float32Array(x));
+    let sum = 0; for (let i = 0; i < x.length; i++) sum += x[i] * x[i];
+    const rms = Math.sqrt(sum / x.length), now = performance.now() - rec.t0;
+    if (now < 300) rec.floor = Math.max(rec.floor, rms * 1.5);          // first 0.3 s: learn the room noise
+    const loud = rms > Math.max(0.015, rec.floor * 2.5);
+    if (loud) { rec.heard = true; rec.lastLoud = now; }
+    rec.levels.push(Math.min(70, 6 + rms * 900)); rec.levels.shift();          // scrolling level meter
+    bars.forEach((b, i) => b.style.height = rec.levels[i] + "px");
+    if ((rec.heard && now - rec.lastLoud > 900) || now > 10000) stopListen(false);
+    else if (!rec.heard && now > 6000) stopListen(true, "Didn’t hear anything", "Press Enter and speak a little louder.");
+  };
+  src.connect(node); node.connect(ac.destination);
+}
+function stopListen(cancel, title, sub) {
+  if (!rec) return;
+  const r = rec; rec = null;
+  r.node.disconnect(); r.src.disconnect(); r.stream.getTracks().forEach(t => t.stop()); r.ac.close();
+  $("mic").classList.remove("rec");
+  if (cancel) { if (title) listenCard(title, sub); return; }
+  send(toWav(r.chunks, r.rate));
+}
+function toWav(chunks, rate) {
+  const n = chunks.reduce((a, c) => a + c.length, 0), all = new Float32Array(n);
+  let o = 0; for (const c of chunks) { all.set(c, o); o += c.length; }
+  const ratio = rate / 16000, m = Math.floor(n / ratio), pcm = new Int16Array(m);
+  for (let i = 0; i < m; i++) {           // average each window: a cheap low-pass before downsampling
+    const a = Math.floor(i * ratio), b = Math.min(n, Math.floor((i + 1) * ratio)); let s = 0;
+    for (let j = a; j < b; j++) s += all[j];
+    pcm[i] = Math.max(-1, Math.min(1, s / Math.max(1, b - a))) * 32767;
+  }
+  const buf = new ArrayBuffer(44 + m * 2), v = new DataView(buf), w = (p, s) => [...s].forEach((c, i) => v.setUint8(p + i, c.charCodeAt(0)));
+  w(0, "RIFF"); v.setUint32(4, 36 + m * 2, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 16000, true); v.setUint32(28, 32000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, m * 2, true);
+  new Int16Array(buf, 44).set(pcm);
+  return new Blob([buf], {type: "audio/wav"});
+}
+async function send(wav) {
+  listenCard("Thinking…", "Audio encoder reads the meaning of the sound · Whisper writes the words · both on this CPU");
+  document.querySelectorAll("#meter i").forEach(b => b.style.height = "6px");
+  const p = {lang};
+  if (pending) Object.assign(p, {tool: pending.tool, prev: JSON.stringify(pending.args), field: pending.field});
+  setStatus("busy", "listening on CPU…");
+  try {
+    const r = await fetch("/api/hear?" + new URLSearchParams(p), {method: "POST", body: wav, headers: {"Content-Type": "audio/wav"}});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || r.status);
+    render(d); setStatus("");
+    // Spoken reply. After a question, listen again for the answer: a real back-and-forth.
+    say(spoken(d), () => { if (voiceOn && (d.status === "clarify" || d.status === "unheard")) setTimeout(startListen, 250); });
+  } catch (e) { setStatus("err", "voice server not reachable"); listenCard("Voice server not reachable", "Typing still works. Start it with apps/typed-assistant/run.sh."); }
+}
+$("vbtn").onclick = toggleVoice;
+$("mic").onclick = toggleListen;
+
 /* ---------- keys ---------- */
 // Grow the input with long commands (e.g. Malayalam sentences) instead of scrolling inside it.
 function grow() { box.style.height = 'auto'; box.style.height = box.scrollHeight + 4 + 'px'; }
 box.addEventListener('input', grow);
 $("go").onclick = run;
-box.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); run(); } });
+box.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); rec ? stopListen(false) : run(); } });
 document.addEventListener("keydown", e => {
+  const typing = document.activeElement === box && box.value !== "";
+  const k = e.key.toLowerCase();
   if (!document.body.classList.contains("started")) {
-    if (["Enter", "ArrowRight", " "].includes(e.key)) { e.preventDefault(); start(); }
+    if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); step < 2 ? goStep(step + 1) : start(); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); goStep(step - 1); }
+    else if (e.key === "Enter") { e.preventDefault(); start(); }
     return;
   }
-  if ((e.key === "t" || e.key === "T") && document.activeElement !== box) { e.preventDefault(); showTools(); return; }
+  if (e.altKey && k === "v") { e.preventDefault(); voiceOn ? toggleListen() : toggleVoice(); return; }
+  if (!typing && !e.altKey && !e.ctrlKey && !e.metaKey) {
+    if (k === "t") { e.preventDefault(); showIntro(); return; }
+    if (k === "v") { e.preventDefault(); toggleVoice(); return; }
+    if (k === "l" && voiceOn) { e.preventDefault(); lang = lang === "en" ? "ml" : "en"; voiceLabel(); return; }
+    if (k === "d") { e.preventDefault(); document.body.classList.toggle("details"); return; }
+  }
   if (e.altKey && /^[1-6]$/.test(e.key)) { e.preventDefault(); runText(EXAMPLES[+e.key - 1]); }
-  else if (e.key === "Escape") { clearPending(); document.body.classList.remove("details"); box.value = ""; box.focus(); }
-  else if ((e.key === "d" || e.key === "D") && document.activeElement !== box) { e.preventDefault(); document.body.classList.toggle("details"); }
-  else if (e.altKey && (e.key === "d" || e.key === "D")) { e.preventDefault(); document.body.classList.toggle("details"); }
+  else if (e.key === "Escape") { stopListen(true); speechSynthesis.cancel(); clearPending(); document.body.classList.remove("details"); box.value = ""; grow(); box.focus(); }
+  else if (e.altKey && k === "d") { e.preventDefault(); document.body.classList.toggle("details"); }
   else if (e.key === "/" && document.activeElement !== box) { e.preventDefault(); box.focus(); }
 });
 $("cancelPending").onclick = () => { clearPending(); box.focus(); };
 $("reset").onclick = async () => { const r = await fetch("/api/reset"); lastEffect = null; renderHome(await r.json()); clearPending(); };
 
 fetch("/api/info").then(r => r.json()).then(i => {
-  renderTools(i.tools);
+  INFO = i; renderIntro(i); renderChips(i.tools);
   $("dSigs").innerHTML = i.tools.map(t => `<div class="sig">${esc(t.name)}(${t.params.map(p => esc(p.name) + ": " + esc(p.type) + (p.required ? "" : " = None")).join(", ")})</div>`).join("");
   $("dFoot").textContent = `One ${i.dims}-D embedding per message, compared with ${i.tools.length} action prototypes (description + ${i.examples} example phrases). Confident when the top score is ≥ ${i.min_score} and ≥ ${i.min_gap} ahead of #2. Model ${i.model}, loaded in ${i.load_s} s. Nothing leaves this laptop.`;
 }).catch(() => {});
 fetch("/api/state").then(r => r.json()).then(s => { if (!state) renderHome(s); }).catch(() => setStatus("err", "local model server not reachable"));
+goStep(0);
+checkVoice();
+if ("speechSynthesis" in window) speechSynthesis.getVoices();   // voices load async in Chromium
 const pre = new URLSearchParams(location.search);
 if (pre.get("intro") === "0" || pre.get("q")) document.body.classList.add("started");
+if (pre.get("step")) goStep(+pre.get("step"));
 if (pre.get("q")) runText(pre.get("q"));
 if (pre.get("details") === "1") document.body.classList.add("details");
+if (pre.get("voice") === "1") checkVoice().then(ok => ok && toggleVoice());
 </script>
 </body>
 </html>

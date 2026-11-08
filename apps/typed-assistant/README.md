@@ -23,14 +23,64 @@ apps/typed-assistant/run.sh --eval     # accuracy on tests.json + threshold tabl
 enum descriptions) in about 9 s and caches them in `data/vectors.npz` (gitignored). Changing the tool table only
 re-embeds the texts that changed. After that, startup takes under a second.
 
-- `?q=...` pre-fills the box and runs it (`?types=0` hides the schema panel).
-- Keyboard: `Enter` runs (nothing runs while you type), `Shift+Enter` new line, `Alt+1`…`Alt+0` examples,
-  `Alt+T` show/hide the tool schemas, `Esc` clear, `/` focus. Tab reaches every button.
+- The page opens on a 3-step intro for developers (`→` / `←`, `Enter` skips to the demo, `T` brings it back):
+  the 8 tools as typed Python signatures, one tool as a function-calling JSON Schema next to its prototype
+  recipe and validator rules, and the per-message pipeline (text and voice lanes) with the real thresholds.
+- `?q=...` pre-fills the box and runs it (and skips the intro); `?intro=0` skips the intro; `?step=1` opens a step;
+  `?details=1` opens the details drawer; `?voice=1` turns voice on.
+- Keyboard: `Enter` runs (nothing runs while you type), `Shift+Enter` new line, `Alt+1`…`Alt+6` examples,
+  `D` details drawer, `V` voice on/off, `Esc` clear, `/` focus. Tab reaches every button.
 - After a ❓ question, the next thing you type (or the option you click) is the answer: "turn on the light" → "bedroom"
   completes `set_light(room="bedroom", on=True)`. If the answer does not fill the asked field and clearly reads as a new
   command ("order 2 biryani"), it is treated as a new command.
 - After a 🤷, clicking one of the two tools re-parses the same sentence with that tool.
 - "Reset the house" puts the state back (all lights off, doors locked).
+
+## Voice (optional toggle)
+
+Voice is **off by default** and the app works exactly the same without it. `V` (or the 🎙 button in the header) turns
+it on; if the voice server is not running the button says so and typing carries on. With voice on:
+
+- `Enter` on an empty box (or `Alt+V`, or the 🎙 next to Run) starts listening. It stops by itself after a ~0.9 s
+  pause (max 10 s), or press `Enter` again. `L` switches Whisper between English and Malayalam.
+- Each clip goes two ways, both on the laptop CPU (`voice.py`, port 8092, started by `run.sh`):
+  1. **Meaning straight from the sound.** EmbeddingGemma 2's audio encoder embeds the waveform into the same
+     768-D space as text and compares it with the same 8 tool prototypes (built from the same descriptions and
+     examples). No words involved, so it picks the *action* only. Own thresholds: top ≥ 0.70 and ≥ 0.05 ahead.
+  2. **Words for the values.** Whisper `base` (int8, with a vocabulary hint: Amma, Achan, Carnatic, biryani, sadya…)
+     writes a transcript, which goes through the normal text pipeline, so values are extracted and validated as usual.
+- The text path decides the call. If the words alone are 🤷 but the sound is confident, the sound's action is used.
+  The card shows both: "Heard “…”" and "From the sound alone: AC 0.76 · agrees ✓".
+- Replies are spoken with the browser's local voice. After a ❓ question it listens again for the answer, so
+  "turn on the light" → "Which room?" → "the balcony" completes `set_light(room="balcony", on=True)` hands-free.
+
+Setup (once, ~1 GB download; the model is already in the Hugging Face cache if the notebook ran here):
+
+```bash
+python3 -m venv demo/.venv-audio
+demo/.venv-audio/bin/pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
+demo/.venv-audio/bin/pip install sentence-transformers transformers faster-whisper soundfile librosa pillow numpy
+apps/typed-assistant/run.sh        # starts app.py (8091) and voice.py (8092); NO_VOICE=1 skips voice
+```
+
+Measured on this laptop (Ryzen 7 5800H, WSL2, CPU only), 10 test clips spoken by the Windows voice
+(`data/voice-test/`, regenerate with `say.ps1`): all 8 commands give the right typed call, both off-topic
+clips give 🤷, the sound alone picks the right action for all 8 (0.73–0.82, 0.09–0.20 ahead of #2; off-topic 0.64–0.66).
+
+| Step | Time per 2–4 s command |
+|---|---|
+| Audio encoder (EmbeddingGemma 2, PyTorch float32, 6 threads) | 0.47–0.8 s |
+| Whisper `base` int8 | 0.55–0.69 s |
+| Text pipeline | ~0.1 s |
+| **Total** | **1.0–1.5 s** |
+
+Thread count matters: the audio encoder takes 2.1 s on 16 threads, 1.3 s on 8 and ~0.56 s on 6 (`VOICE_THREADS`).
+bfloat16 is 4× slower on this CPU (no native bf16), so it stays float32. The voice server uses ~1.7 GB RAM;
+running a second copy of the model at the same time pushes an 8 GB laptop into swap and makes both crawl.
+
+Voice limits: tested with a synthetic English voice, not a room full of real accents; Whisper `base` Malayalam
+is weak (the sound path still picks the action); the audio thresholds come from 10 clips; spoken replies use
+whatever English voice the OS has.
 
 ## How it works
 

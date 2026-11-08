@@ -5,6 +5,7 @@ __pycache__/
 
 # Laptop CPU demo (never commit model weights)
 demo/.venv/
+demo/.venv-audio/
 demo/models/
 *.litertlm
 demo/serve.log

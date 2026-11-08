@@ -2,6 +2,8 @@
 # Type-safe on-device assistant: EmbeddingGemma 2 on the laptop CPU via LiteRT-LM.
 # Usage: ./run.sh            # serve http://127.0.0.1:8091
 #        ./run.sh --eval     # tool selection / exact args / clarifying questions on tests.json
+#        NO_VOICE=1 ./run.sh # skip the voice server (the app works the same, the voice toggle says "off")
+# Voice (optional, see README): demo/.venv-audio with torch + sentence-transformers + faster-whisper.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -29,4 +31,15 @@ quiet() { grep --line-buffered -vE '^(INFO: |WARNING: |[IW][0-9]{4} )' >&2; }
 if [ "${1:-}" = "--eval" ]; then
   exec "$PY" app.py "$@" 2> >(quiet)
 fi
-exec "$PY" app.py --port "$PORT" "$@" 2> >(quiet)
+# Voice sidecar on :8092 if its venv exists. It loads in ~15 s in the background; the toggle in the
+# app turns on once it answers.
+VPY=../../demo/.venv-audio/bin/python
+if [ -z "${NO_VOICE:-}" ] && [ -x "$VPY" ]; then
+  HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-1} TRANSFORMERS_VERBOSITY=error "$VPY" voice.py \
+    2> >(grep --line-buffered -vE 'Warning|warn|Loading weights' >&2) &
+  VOICE_PID=$!
+  trap 'kill $VOICE_PID 2>/dev/null' EXIT
+else
+  echo "(voice server not started: no demo/.venv-audio; typing still works)" >&2
+fi
+"$PY" app.py --port "$PORT" "$@" 2> >(quiet)

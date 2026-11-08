@@ -949,8 +949,30 @@ def signature(t):
             ty = '"HH:MM"'
         else:
             ty = p["type"]
-        params.append(dict(name=p["name"], type=ty, required=p.get("required", True)))
-    return dict(name=t["name"], description=t["description"], params=params, examples=t["examples"][:2])
+        params.append(dict(name=p["name"], type=ty, required=p.get("required", True), ask=p["ask"]))
+    return dict(name=t["name"], description=t["description"], params=params, examples=t["examples"],
+                schema=json_schema(t))
+
+
+def json_schema(t):
+    """The tool as a function-calling JSON Schema (what an LLM tool API would be given)."""
+    props, req = {}, []
+    for p in t["params"]:
+        if p["type"] == "enum":
+            sch = {"type": "string", "enum": p["values"]}
+        elif p["type"] == "int":
+            sch = {"type": "integer", "minimum": p["min"], "maximum": p["max"]}
+        elif p["type"] == "bool":
+            sch = {"type": "boolean"}
+        elif p["type"] == "time":
+            sch = {"type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"}
+        else:
+            sch = {"type": "string"}
+        props[p["name"]] = sch
+        if p.get("required", True):
+            req.append(p["name"])
+    return {"name": t["name"], "description": t["description"],
+            "parameters": {"type": "object", "properties": props, "required": req, "additionalProperties": False}}
 
 
 # ================================================================ eval
@@ -1030,6 +1052,60 @@ def run_eval():
 
 # ================================================================ server
 
+VOICE_URL = os.environ.get("VOICE_URL", "http://127.0.0.1:8092")
+
+
+def voice_text(t):
+    """Whisper writes '7.30pm' and ends with a full stop; the text pipeline wants '7:30 pm'."""
+    t = re.sub(r"\b(\d{1,2})\.(\d{2})\s*([ap])\.?m\.?", r"\1:\2 \3m", t, flags=re.I)
+    t = re.sub(r"\b(\d{1,2})\s*([ap])\.m\.", r"\1 \2m", t, flags=re.I)
+    return t.strip().rstrip(".!?。").strip()
+
+
+def voice_call(path, body=None, timeout=30):
+    import urllib.request
+    req = urllib.request.Request(VOICE_URL + path, data=body, headers={"Content-Type": "audio/wav"} if body else {})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def hear(asst, wav, qs, lock):
+    """Spoken command: the sound picks the action on its own, Whisper's words fill the values.
+    The text path stays in charge of the call (it validates every value); when the words alone
+    are not confident about the action, the sound's confident pick is used instead."""
+    lang = qs.get("lang", ["en"])[0]
+    h = voice_call("/hear?lang=" + urllib.parse.quote(lang), wav)
+    text = voice_text(h["words"]["text"])
+    sound = h["sound"]
+    pick = sound["ranked"][0]["tool"] if sound["confident"] else None
+    voice = dict(transcript=h["words"]["text"], text=text, lang=h["words"]["lang"], seconds=h["seconds"],
+                 sound=sound, stt_ms=h["words"]["ms"], sound_ms=sound["ms"], used="words")
+    if not text:
+        return dict(status="unheard", voice=voice, state=asst.state)
+    prev = None
+    if "prev" in qs:
+        try:
+            prev = json.loads(qs["prev"][0])
+            prev = prev if isinstance(prev, dict) else None
+        except ValueError:
+            prev = None
+    with lock:
+        if prev is not None:   # answering a clarifying question
+            out = asst.parse(text, qs.get("tool", [None])[0], prev, qs.get("field", [None])[0])
+            voice["used"] = "answer"
+        else:
+            first = asst.parse(text, execute=False)
+            if first["status"] == "unsure" and pick:
+                out = asst.parse(text, pick)
+                voice["used"] = "sound"
+            else:
+                out = asst.parse(text)
+            out["ms"], out["cached"] = first["ms"], first["cached"]  # second pass reuses the cached vector
+    voice["agree"] = bool(out.get("tool")) and out.get("tool") == sound["ranked"][0]["tool"]
+    out["voice"] = voice
+    return out
+
+
 def make_handler(asst, page):
     lock = threading.Lock()
 
@@ -1077,10 +1153,30 @@ def make_handler(asst, page):
                     self.json(asst.state)
                 elif url.path == "/api/info":
                     self.json(asst.info())
+                elif url.path == "/api/voice":
+                    try:
+                        self.json(dict(ok=True, **voice_call("/health", timeout=2)))
+                    except Exception:
+                        self.json(dict(ok=False, url=VOICE_URL))
                 else:
                     self.send(404, b"not found", "text/plain")
             except (BrokenPipeError, ConnectionResetError):
                 pass
+
+        def do_POST(self):
+            url = urllib.parse.urlparse(self.path)
+            if url.path != "/api/hear":
+                return self.send(404, b"not found", "text/plain")
+            n = int(self.headers.get("Content-Length", 0))
+            if not 0 < n <= 2_000_000:
+                return self.json({"error": "send up to 30 s of 16-bit 16 kHz WAV"}, 400)
+            wav = self.rfile.read(n)
+            try:
+                self.json(hear(asst, wav, urllib.parse.parse_qs(url.query), lock))
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+            except Exception as e:
+                self.json({"error": "voice server not reachable: " + repr(e)[:160]}, 503)
 
     return Handler
 
