@@ -111,6 +111,9 @@ body.started #intro{display:none}
 .vbtn{display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:999px;padding:10px 18px;font-size:16px;color:var(--muted);white-space:nowrap}
 .vbtn.on{background:#2a1f3d;color:#fff;box-shadow:0 0 0 2px #a78bfa inset}
 .vbtn.na{opacity:.6}
+.micsel{display:none;max-width:260px;background:var(--surface);color:var(--ink);border:0;border-radius:999px;padding:10px 14px;font:16px var(--sans);cursor:pointer}
+body.voice .micsel{display:block}
+.micsel:focus-visible{outline:2px solid #a78bfa}
 .hd-right{display:flex;gap:10px;align-items:flex-start}
 #mic{display:none;background:#3b2a5c;border-radius:var(--radius);padding:0 22px;font-size:26px}
 body.voice #mic{display:block}
@@ -121,6 +124,7 @@ body.voice #mic{display:block}
 .meter i{width:9px;border-radius:5px;background:#a78bfa;height:6px;transition:height .08s}
 .listen .lt{font-size:30px}
 .listen .ls{font-size:17px;color:var(--muted);margin-top:6px}
+.listen .micname{display:inline-block;margin-top:8px;font-size:15px;color:var(--faint)}
 .heard{margin-bottom:20px;display:grid;gap:10px}
 .heard small{font-size:15px;color:var(--faint)}
 .heard div{font-size:21px;color:var(--muted)}
@@ -171,7 +175,7 @@ body.voice #mic{display:block}
 </section>
 <header>
   <div><h1>Say it. Get a typed call.</h1><p class="sub">EmbeddingGemma 2 picks the action by meaning, then every value is checked against its type. Nothing invalid ever runs.</p></div>
-  <div class="hd-right"><button class="vbtn" id="vbtn" aria-pressed="false">🎙 <span id="vtext">Voice off</span></button><div class="status" id="status"><i></i><span id="statusText">running locally on CPU · offline</span></div></div>
+  <div class="hd-right"><button class="vbtn" id="vbtn" aria-pressed="false">🎙 <span id="vtext">Voice off</span></button><select class="micsel" id="micsel" aria-label="Microphone" title="Microphone (M)"><option value="">Default mic</option></select><div class="status" id="status"><i></i><span id="statusText">running locally on CPU · offline</span></div></div>
 </header>
 <main>
   <section>
@@ -182,7 +186,7 @@ body.voice #mic{display:block}
   </section>
   <section class="home"><div class="strip"><h2>It picks one of these 8 actions</h2><div class="chips" id="chips"></div></div><h2>The house</h2><div class="tiles" id="home"></div></section>
 </main>
-<div class="foot"><span><kbd>Enter</kbd> run · <kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>6</kbd> examples · <kbd>Esc</kbd> clear · <kbd>T</kbd> intro · <kbd>D</kbd> details · <kbd>V</kbd> voice on/off · voice on: <kbd>Enter</kbd> on an empty box or <kbd>Alt</kbd>+<kbd>V</kbd> talks · <kbd>L</kbd> English/Malayalam</span><button id="reset">Reset the house</button></div>
+<div class="foot"><span><kbd>Enter</kbd> run · <kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>6</kbd> examples · <kbd>Esc</kbd> clear · <kbd>T</kbd> intro · <kbd>D</kbd> details · <kbd>V</kbd> voice on/off · voice on: <kbd>Enter</kbd> on an empty box or <kbd>Alt</kbd>+<kbd>V</kbd> talks · <kbd>L</kbd> language · <kbd>M</kbd> mic</span><button id="reset">Reset the house</button></div>
 
 <aside id="details" aria-label="Details">
   <div><h4>Typed call as JSON</h4><pre id="dJson">—</pre><h4>How each value was filled</h4><table id="dTrace"></table><h4>Action scores (cosine similarity)</h4><table id="dRank"></table><div id="dVoiceWrap" hidden><h4>From the sound alone (audio encoder, no words)</h4><table id="dVoice"></table></div><p id="dFoot"></p></div>
@@ -403,6 +407,31 @@ function setStatus(kind, msg) { $("status").className = "status " + kind; $("sta
 
 /* ---------- voice: a toggle, off by default; typing works the same either way ---------- */
 let voiceOn = false, lang = "en", rec = null, speaking = false;
+/* Microphone choice. Names only show after the page has mic permission once, so the list refreshes
+   after the first recording and whenever a mic is plugged in or out. The choice is remembered. */
+let micId = ""; try { micId = localStorage.getItem("micId") || ""; } catch {}
+async function listMics() {
+  if (!navigator.mediaDevices?.enumerateDevices) return;
+  const mics = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audioinput" && d.deviceId !== "default" && d.deviceId !== "communications");
+  if (micId && !mics.some(m => m.deviceId === micId)) micId = "";
+  $("micsel").innerHTML = `<option value="">Default mic</option>` +
+    mics.map((m, i) => `<option value="${esc(m.deviceId)}">${esc(m.label || "Microphone " + (i + 1))}</option>`).join("");
+  $("micsel").value = micId;
+}
+function pickMic(id) {
+  micId = id; try { localStorage.setItem("micId", id); } catch {}
+  $("micsel").value = id;
+  if (rec) { stopListen(true); startListen(); }   // switch mid-listen: start over on the new mic
+}
+function nextMic() {
+  const o = [...$("micsel").options], i = o.findIndex(x => x.value === micId);
+  pickMic(o[(i + 1) % o.length].value);
+  setStatus("", "mic: " + $("micsel").selectedOptions[0].textContent);
+  setTimeout(() => setStatus(""), 2500);
+}
+$("micsel").onchange = e => { pickMic(e.target.value); box.focus(); };
+navigator.mediaDevices?.addEventListener?.("devicechange", listMics);
+listMics();
 function voiceLabel() {
   const b = $("vbtn");
   b.classList.toggle("on", voiceOn); b.classList.toggle("na", !(VOICE && VOICE.ok));
@@ -451,12 +480,20 @@ async function startListen() {
   if (!voiceOn || rec) return;
   speechSynthesis.cancel();
   let stream;
-  try { stream = await navigator.mediaDevices.getUserMedia({audio: {channelCount: 1, echoCancellation: true, noiseSuppression: true}}); }
-  catch (e) { listenCard("Microphone blocked", "Allow the mic for this page (lock icon in the address bar), then press Enter again."); return; }
+  const want = {channelCount: 1, echoCancellation: true, noiseSuppression: true};
+  try { stream = await navigator.mediaDevices.getUserMedia({audio: micId ? {...want, deviceId: {exact: micId}} : want}); }
+  catch (e) {
+    if (micId && (e.name === "OverconstrainedError" || e.name === "NotFoundError" || e.name === "NotReadableError")) {
+      pickMic(""); listenCard("That mic is not available", "Switched back to the default mic. Press Enter to try again.");
+    } else listenCard("Microphone blocked", "Allow the mic for this page (lock icon in the address bar), then press Enter again.");
+    return;
+  }
+  listMics();   // with permission granted the real mic names are now readable
+  const micName = stream.getAudioTracks()[0]?.label || "default mic";
   const ac = new AudioContext(), src = ac.createMediaStreamSource(stream), node = ac.createScriptProcessor(2048, 1, 1);
   rec = {stream, ac, src, node, chunks: [], rate: ac.sampleRate, t0: performance.now(), heard: false, lastLoud: 0, floor: 0.004, levels: Array(14).fill(6)};
   $("mic").classList.add("rec");
-  listenCard("Listening…", `Speak now. It stops when you pause. ${lang === "ml" ? "Malayalam" : "English"} words, any language for the sound.`);
+  listenCard("Listening…", `Speak now. It stops when you pause. ${lang === "ml" ? "Malayalam" : "English"} words, any language for the sound.<br><span class="micname">🎙 ${esc(micName)}</span>`);
   const bars = [...document.querySelectorAll("#meter i")];
   node.onaudioprocess = e => {
     if (!rec) return;
@@ -533,6 +570,7 @@ document.addEventListener("keydown", e => {
   if (!typing && !e.altKey && !e.ctrlKey && !e.metaKey) {
     if (k === "t") { e.preventDefault(); showIntro(); return; }
     if (k === "v") { e.preventDefault(); toggleVoice(); return; }
+    if (k === "m" && voiceOn) { e.preventDefault(); nextMic(); return; }
     if (k === "l" && voiceOn) { e.preventDefault(); lang = lang === "en" ? "ml" : "en"; voiceLabel(); return; }
     if (k === "d") { e.preventDefault(); document.body.classList.toggle("details"); return; }
   }
